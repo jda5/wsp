@@ -1,0 +1,22 @@
+[project]
+name = "wsp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jacob Strauss", email = "jacob.d.strauss@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=2.6.0",
+    "python-dotenv>=1.2.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Flat layout: ship the top-level `llms` and `evals` packages instead of src/wsp.
+module-root = ""
+module-name = ["llms", "evals"]
