@@ -80,13 +80,15 @@ def main() -> None:
     )
 
     _, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
-    print(f"Test Accuracy: {test_accuracy:.4f}")
+    print(f"\n--- Test Accuracy: {test_accuracy:.4f} ---\n")
 
     # Per-class accuracy shows which garments the model confuses.
     y_pred = model.predict(X_test, verbose=0).argmax(axis=1)
     for i, name in enumerate(CLASS_NAMES):
         mask = y_test == i
         print(f"  {name:<12} {np.mean(y_pred[mask] == i):.4f}")
+
+    model.save("trained_fashion_mnist_model.keras")
 
 
 if __name__ == "__main__":
