@@ -10,7 +10,6 @@ from typing import Literal
 import numpy as np
 
 from wsp import views
-from wsp.sandbox import SandboxTimeout
 from wsp.session import Session
 from wsp.tools import Budget, Tool, ToolError
 from wsp.workspace import count_changes
@@ -19,13 +18,12 @@ from wsp.workspace import count_changes
 def standard_tools(
     evaluations: int = 10,
     forward_examples: int | None = 50,
-    timeout: float = 60.0,
 ) -> list[Tool]:
     """
-    All five tools. ``forward_examples=None`` leaves out the forward tool.
+    All five tools. `forward_examples=None` leaves out the forward tool.
     """
     tools = [
-        python_tool(timeout),
+        python_tool(),
         evaluate_tool(evaluations),
         commit_tool(),
         reset_tool(),
@@ -40,22 +38,10 @@ def standard_tools(
 # -------------------------------------------------------------------------------- python
 
 
-def python_tool(timeout: float = 60.0) -> Tool:
-
-    # TODO: Guard against arbitrary code execution - we should not allow the LLM
-    # to perform any actions that aren't operations on the Numpy weights
+def python_tool() -> Tool:
     def handler(session: Session, budget: Budget, code: str) -> str:
         budget.spend()
-        session.sandbox.timeout = timeout
-
-        try:
-            execution = session.sandbox.run(code)
-        except SandboxTimeout as e:
-            session.sandbox.restart(session.workspace.head)
-            raise ToolError(
-                f"Your code ran for more than {timeout:.0f} seconds and was stopped. "
-                "The sandbox restarted from the last commit; other variables were lost."
-            ) from e
+        execution = session.sandbox.run(code)  # raises ForbiddenCode if not allowed
 
         output = execution.output or "(no output)"
         if execution.changed:
@@ -69,19 +55,25 @@ def python_tool(timeout: float = 60.0) -> Tool:
     return Tool(
         name="python",
         description=(
-            "Run Python code in a persistent namespace (variables carry over between calls). "
-            "The weights are in `W`, a dict of name -> numpy array; edit them in place, e.g. "
-            "`W['dense.bias'][3] += 0.5`. Also available: `np` (numpy); "
-            "`show(name_or_array, rows=None, cols=None, precision=3)` prints a slice with its indices; "
-            "`info()` prints every tensor's shape and statistics. "
-            "The value of the last expression is printed, as in a notebook. "
-            "Machine learning frameworks cannot be imported. "
-            f"Code is stopped after {timeout:.0f} seconds."
+            "Run numpy code in a persistent namespace (variables carry over between "
+            "calls). The weights are in `W`, a dict of name -> numpy array; edit them "
+            "in place, e.g. `W['dense.bias'][3] += 0.5`.\n\n"
+            "Available: `np` (the common numpy functions, plus np.linalg and "
+            "np.random.default_rng); `show(name_or_array, rows=None, cols=None, "
+            "precision=3)` prints a slice with its indices; `info()` prints every "
+            "tensor's shape and statistics; and the builtins print, len, range, min, "
+            "max, sum, abs, round, slice, sorted, zip, enumerate, list, tuple, dict, int, "
+            "float, bool and str.\n\n"
+            "Only assignments and expressions are allowed: no imports, loops, "
+            "comprehensions, functions, lambdas or names starting with an underscore. "
+            "Write vectorised numpy instead of loops, e.g. "
+            "`W['dense.kernel'][:, :10] = templates.T`. "
+            "The value of the last expression is printed, as in a notebook."
         ),
         parameters={
             "type": "object",
             "properties": {
-                "code": {"type": "string", "description": "Python code to run."}
+                "code": {"type": "string", "description": "Numpy code to run."}
             },
             "required": ["code"],
         },

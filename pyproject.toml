@@ -19,6 +19,6 @@ requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-# Flat layout: ship the top-level `llms` and `evals` packages instead of src/wsp.
+# Flat layout: ship the top-level `wsp` package instead of src/wsp.
 module-root = ""
-module-name = ["wsp", "llms", "evals"]
+module-name = "wsp"

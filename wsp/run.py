@@ -71,24 +71,23 @@ def run(
     system = system_prompt(experiment)
     prompt = config.prompt or experiment.prompt()
 
-    with Sandbox(baseline) as sandbox:
-        session = Session(experiment, sandbox, workspace, log)
-        toolbox = Toolbox(config.tools, session, config.max_output_chars)
+    session = Session(experiment, Sandbox(baseline), workspace, log)
+    toolbox = Toolbox(config.tools, session, config.max_output_chars)
 
-        log.event(
-            "start",
-            experiment=experiment.name,
-            agent=agent.name,
-            system=system,
-            prompt=prompt,
-        )
+    log.event(
+        "start",
+        experiment=experiment.name,
+        agent=agent.name,
+        system=system,
+        prompt=prompt,
+    )
 
-        baseline_scores = session.score(experiment.test(), baseline)
+    baseline_scores = session.score(experiment.test(), baseline)
 
-        agent.run(system, prompt, toolbox, log, config.max_turns)
+    agent.run(system, prompt, toolbox, log, config.max_turns)
 
-        final = _final_weights(session)
-        final_scores = session.score(experiment.test(), final)
+    final = _final_weights(session)
+    final_scores = session.score(experiment.test(), final)
 
     changes = count_changes(baseline, final)
 

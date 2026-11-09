@@ -1,8 +1,8 @@
 """
 LLM-friendly text views of numpy arrays.
 
-Everything here is plain numpy, so it can run inside the sandbox. The
-functions return strings; the sandbox wraps them in helpers that print.
+Everything here is plain numpy and returns strings. The sandbox wraps
+these functions in `show()` and `info()`, which print.
 """
 
 from collections.abc import Mapping
