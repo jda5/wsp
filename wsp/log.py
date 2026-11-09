@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -7,19 +8,29 @@ import numpy as np
 # Never shortened
 KEEP_IN_FULL = {"code", "system", "prompt", "report"}
 
+# Receives each event as it is written, e.g. a ConsoleView showing the run live.
+Listener = Callable[[dict], None]
+
 
 class RunLog:
-    def __init__(self, path: str | Path, max_chars: int | None = 5_000):
+    def __init__(
+        self,
+        path: str | Path,
+        max_chars: int | None = 5_000,
+        listeners: list[Listener] | None = None,
+    ):
         """
         Args:
             path: The JSONL file to append to.
             max_chars: Longer text (tool outputs, thinking, replies) keeps its
                 start and end, with a note saying how much was left out.
                 None keeps everything.
+            listeners: Called with every event, exactly as it was written.
         """
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.max_chars = max_chars
+        self.listeners = listeners or []
 
     def event(self, kind: str, **data) -> None:
         """
@@ -36,8 +47,15 @@ class RunLog:
             **self._shorten(data),  # type: ignore
         }
 
+        line = json.dumps(record, default=_to_json)
+
         with self.path.open(mode="a", encoding="utf-8") as file:
-            file.write(json.dumps(record, default=_to_json) + "\n")
+            file.write(line + "\n")
+
+        # Listeners get the event as it reads back from the file, so a live
+        # view and a replay of the log (python -m wsp.watch) show the same thing.
+        for listener in self.listeners:
+            listener(json.loads(line))
 
     # -------------------------------------------------------------------------------- private
 

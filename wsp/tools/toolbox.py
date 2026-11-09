@@ -55,17 +55,20 @@ class Toolbox:
     # -------------------------------------------------------------------------------- public
 
     def call(self, name: str, arguments: dict[str, Any]) -> ToolResult:
+        """
+        Run a tool. The call and its result are logged as two events, so
+        anything the tool logs while it runs (an evaluation, a report) sits
+        between them, and the times show how long it took.
+        """
+        self.session.log.event("tool_call", name=name, arguments=arguments)
+
         if name not in self.tools:
             result = ToolResult(f"Unknown tool '{name}'.", is_error=True)
         else:
             result = self._call(self.tools[name], arguments)
 
         self.session.log.event(
-            "tool",
-            name=name,
-            arguments=arguments,
-            output=result.text,
-            is_error=result.is_error,
+            "tool_result", name=name, output=result.text, is_error=result.is_error
         )
         return result
 
