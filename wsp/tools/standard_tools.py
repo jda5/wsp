@@ -212,8 +212,10 @@ def reset_tool() -> Tool:
     def handler(
         session: Session, budget: Budget, to: Literal["last_commit", "baseline"]
     ) -> str:
+        weights = session.workspace.reset(to)  # raises on an unknown `to`
         budget.spend()
-        session.sandbox.set_weights(session.workspace.reset(to))
+
+        session.sandbox.set_weights(weights)
         session.log.event("reset", to=to)
 
         return f"W has been reset to the {to.replace('_', ' ')}."

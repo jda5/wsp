@@ -100,7 +100,14 @@ class Workspace:
         """
         Return a copy of the weights to go back to.
         """
-        return _copy(self.head if to == "last_commit" else self.baseline)
+        match to:
+            case "last_commit":
+                return _copy(self.head)
+
+            case "baseline":
+                return _copy(self.baseline)
+
+        raise ValueError(f"Cannot reset to '{to}': use 'last_commit' or 'baseline'.")
 
 
 # -------------------------------------------------------------------------------- helpers
