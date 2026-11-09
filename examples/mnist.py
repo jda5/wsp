@@ -20,7 +20,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", choices=["zeros", "trained"], default="zeros")
     parser.add_argument("--evaluations", type=int, default=10)
-    parser.add_argument("--forward-examples", type=int, default=50)
+    parser.add_argument("--forward-examples", type=int, default=100)
     parser.add_argument("--max-turns", type=int, default=50)
     parser.add_argument("--agent", choices=["claude", "human"], default="claude")
     parser.add_argument("--model", default="claude-opus-5-5")
