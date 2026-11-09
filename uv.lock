@@ -1323,6 +1323,7 @@ dependencies = [
     { name = "anthropic" },
     { name = "claude-agent-sdk" },
     { name = "python-dotenv" },
+    { name = "rich" },
     { name = "tensorflow" },
 ]
 
@@ -1331,5 +1332,6 @@ requires-dist = [
     { name = "anthropic", specifier = ">=2.6.0" },
     { name = "claude-agent-sdk", specifier = ">=0.2.179" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
+    { name = "rich", specifier = ">=15.0" },
     { name = "tensorflow", specifier = ">=2.22.0rc0" },
 ]
