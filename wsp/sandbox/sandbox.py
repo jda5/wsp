@@ -71,9 +71,9 @@ SAFE_BUILTINS = {
 PRINT_OPTIONS = {
     "precision": 3,
     "suppress": True,
-    "threshold": 200,
+    "threshold": 1000,
     "edgeitems": 3,
-    "linewidth": 120,
+    "linewidth": 250,
     "legacy": "1.25",
 }
 
@@ -162,7 +162,7 @@ class Sandbox:
             Print a 1-D or 2-D array (or a weight, by name) with its indices.
 
             rows and cols take any numpy index: an int, a slice, or a list of
-            ints. At most 20 rows and 12 columns are shown.
+            ints. At most 50 rows and 30 columns are shown.
             """
             name, array = (x, self.weights[x]) if isinstance(x, str) else ("array", x)
             print(views.render_array(name, array, rows, cols, precision))
