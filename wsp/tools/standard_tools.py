@@ -55,20 +55,15 @@ def python_tool() -> Tool:
     return Tool(
         name="python",
         description=(
-            "Run numpy code in a persistent namespace (variables carry over between "
-            "calls). The weights are in `W`, a dict of name -> numpy array; edit them "
-            "in place, e.g. `W['dense.bias'][3] += 0.5`.\n\n"
-            "Available: `np` (the common numpy functions, plus np.linalg and "
-            "np.random.default_rng); `show(name_or_array, rows=None, cols=None, "
-            "precision=3)` prints a slice with its indices; `info()` prints every "
-            "tensor's shape and statistics; and the builtins print, len, range, min, "
-            "max, sum, abs, round, slice, sorted, zip, enumerate, list, tuple, dict, int, "
-            "float, bool and str.\n\n"
-            "Only assignments and expressions are allowed: no imports, loops, "
-            "comprehensions, functions, lambdas or names starting with an underscore. "
-            "Write vectorised numpy instead of loops, e.g. "
-            "`W['dense.kernel'][:, :10] = templates.T`. "
-            "The value of the last expression is printed, as in a notebook."
+            "Run numpy code to view or edit the weights. `W` is a dict of name -> "
+            "numpy array; edit it by index, e.g. `W[name][3] += 0.5`. "
+            "Variables are kept between calls, and the value of the last line is "
+            "printed. Also available: `np`, `show()`, `info()` and simple builtins "
+            "(print, len, range, slice, min, max, sum, abs, round, sorted, zip, "
+            "enumerate, list, tuple, dict, int, float, bool, str). No imports, "
+            "loops, comprehensions, functions or lambdas: write whole-array numpy "
+            "instead. The section 'Working with the weights' in your instructions "
+            "shows how, with examples."
         ),
         parameters={
             "type": "object",

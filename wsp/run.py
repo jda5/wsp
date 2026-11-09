@@ -19,6 +19,7 @@ from wsp.agents import BaseAgent
 from wsp.experiments import Experiment
 from wsp.log import RunLog
 from wsp.sandbox import Sandbox
+from wsp.sandbox.guide import weights_guide
 from wsp.session import Session
 from wsp.tools import Tool, Toolbox
 from wsp.tools.standard_tools import standard_tools
@@ -68,7 +69,7 @@ def run(
     baseline = experiment.get_weights()
     workspace = Workspace(baseline, folder / "snapshots")
 
-    system = system_prompt(experiment)
+    system = system_prompt(experiment, config)
     prompt = config.prompt or experiment.prompt()
 
     session = Session(experiment, Sandbox(baseline), workspace, log)
@@ -115,15 +116,19 @@ def run(
     return folder
 
 
-def system_prompt(experiment: Experiment) -> str:
-    weights = views.summarize_weights(experiment.get_weights())
+def system_prompt(experiment: Experiment, config: RunConfig) -> str:
+    """
+    The rules, the experiment, the weights as they start, and how to edit them.
+    """
+    weights = experiment.get_weights()
 
     sections = [
         PROMPT,
         experiment.description(),
-        f"## Weights at the start\n\n{weights}",
+        f"## Weights at the start\n\n{views.summarize_weights(weights)}",
+        weights_guide(weights, config.max_output_chars),
     ]
-    return "\n\n".join(sections)
+    return "\n\n".join(section for section in sections if section)
 
 
 # -------------------------------------------------------------------------------- private
