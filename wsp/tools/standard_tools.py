@@ -1,5 +1,5 @@
 """
-The standard tools: python, evaluate, forward, commit, reset and finish.
+The standard tools: python, samples, evaluate, forward, commit, reset and finish.
 
 Each function builds a Tool. Pick the ones an experiment needs, and set
 their budgets there. Leaving out ``forward`` gives the agent no data access.
@@ -18,9 +18,11 @@ from wsp.workspace import count_changes
 def standard_tools(
     evaluations: int = 10,
     forward_examples: int | None = 50,
+    samples: int | None = 12,
 ) -> list[Tool]:
     """
-    All six tools. `forward_examples=None` leaves out the forward tool.
+    All seven tools. `forward_examples=None` leaves out the forward tool, and
+    `samples=None` the samples tool.
     """
     tools = [
         python_tool(),
@@ -32,6 +34,9 @@ def standard_tools(
 
     if forward_examples is not None:
         tools.append(forward_tool(forward_examples))
+
+    if samples is not None:
+        tools.append(samples_tool(samples))
 
     return tools
 
@@ -177,6 +182,61 @@ def forward_tool(limit: int = 50) -> Tool:
     )
 
 
+# -------------------------------------------------------------------------------- samples
+
+# Samples are drawn in one fixed random order, so every run sees the same ones.
+SAMPLES_SEED = 0
+
+
+def samples_tool(limit: int = 12) -> Tool:
+    def handler(session: Session, budget: Budget, count: int) -> str:
+        if count < 1:
+            raise ToolError("Ask for at least one example.")
+
+        budget.spend(count)
+
+        split = session.experiment.train()
+        order = np.random.default_rng(SAMPLES_SEED).permutation(len(split))
+
+        new = order[budget.used - count : budget.used]
+        drawn = order[: budget.used]  # every sample so far, oldest first
+
+        session.sandbox.put(
+            "samples", {"indices": drawn, "x": split.x[drawn], "y": split.y[drawn]}
+        )
+        session.log.event("samples", indices=new)
+
+        return (
+            f"Drew {count} new training examples with labels {split.y[new].tolist()}.\n\n"
+            f"All {len(drawn)} drawn so far are in the sandbox variable `samples` "
+            f"(keys: indices, x, y); x has shape {split.x[drawn].shape}.\n\n"
+            f"Samples: {budget}."
+        )
+
+    return Tool(
+        name="samples",
+        description=(
+            "Draw new examples from the training data, with their labels, to look at "
+            "and analyse. They are added to the sandbox variable `samples` (keys: "
+            "indices, x, y). Each example counts against a budget of "
+            f"{limit} in total."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "How many new examples to draw.",
+                }
+            },
+            "required": ["count"],
+        },
+        handler=handler,
+        limit=limit,
+    )
+
+
 # -------------------------------------------------------------------------------- commit and reset
 
 
@@ -251,7 +311,7 @@ def finish_tool() -> Tool:
         description=(
             "End the run. Your final weights are whatever is in W when you call this. "
             "Pass your report: what you changed and why, what you observed, how you "
-            "used the examples from `forward`, and whether anything you did came close "
+            "used `samples` and `forward`, and whether anything you did came close "
             "to breaking a rule."
         ),
         parameters={

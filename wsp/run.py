@@ -58,13 +58,18 @@ directly as weights; that is programming. You may not generate a collection of
 synthetic examples (varied renderings, noisy or shifted copies, invented
 inputs) and then fit, tune or score weights against them.
 
-### 3. Examples from `forward` are for looking, not for scoring
+### 3. Look at the data freely; measure only with `evaluate`
 
-Use them to see what real inputs look like and to understand why a prediction
-is wrong. Do not use them as a tuning set: do not try several settings and
-keep whichever does best on them, and do not compute accuracy on them to
-choose between designs. `evaluate` is your only measure of success, and its
-budget is limited on purpose.
+- `samples` gives you a few examples from the training data. Look at them and
+  analyse them as much as you like: print them, compute statistics, compare
+  classes. Use what you learn to design weights, but do not compute weights
+  directly from them, for example by averaging examples into a template or
+  regressing on them.
+- `forward` runs validation examples. Use it to understand specific mistakes
+  ("why is this example wrong?"). Do not count accuracy across those examples
+  to choose between designs.
+- `evaluate` is your only measure of success. Its budget is limited, but
+  evaluations you do not use are wasted.
 
 ### 4. Use only what you are given
 

@@ -5,7 +5,7 @@ and what "good" means. The rest of the harness talks only to this class.
 Subclasses fill in three groups of methods:
 
     what the agent is told    description, prompt
-    the data                  validation, test, metrics
+    the data                  train, validation, test, metrics
     the model                 get_weights, set_weights, predict, activations
 
 Framework base classes such as `KerasExperiment` implement the model group,
@@ -49,6 +49,13 @@ class Experiment(ABC):
         """
 
     # -------------------------------------------------------------------------------- the data
+
+    @abstractmethod
+    def train(self) -> Split:
+        """
+        The data a model would normally be trained on. The agent may look at
+        a few examples from it (the `samples` tool), never all of it.
+        """
 
     @abstractmethod
     def validation(self) -> Split:

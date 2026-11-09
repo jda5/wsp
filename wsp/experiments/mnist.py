@@ -79,6 +79,9 @@ and column = predicted digit."""
 
     # -------------------------------------------------------------------------------- the data
 
+    def train(self) -> Split:
+        return self.data.train
+
     def validation(self) -> Split:
         return self.data.validation
 
