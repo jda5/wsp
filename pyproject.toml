@@ -21,4 +21,4 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 # Flat layout: ship the top-level `llms` and `evals` packages instead of src/wsp.
 module-root = ""
-module-name = ["llms", "evals"]
+module-name = ["wsp", "llms", "evals"]
