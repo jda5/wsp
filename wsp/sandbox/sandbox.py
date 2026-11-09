@@ -57,6 +57,7 @@ SAFE_BUILTINS = {
     "sorted": sorted,
     "zip": zip,
     "enumerate": enumerate,
+    "map": map,  # safe without lambda: it can only map functions already in reach
     "list": list,
     "tuple": tuple,
     "dict": dict,

@@ -61,7 +61,7 @@ def python_tool() -> Tool:
             "Variables are kept between calls, and the value of the last line is "
             "printed. Also available: `np`, `show()`, `info()` and simple builtins "
             "(print, len, range, slice, min, max, sum, abs, round, sorted, zip, "
-            "enumerate, list, tuple, dict, int, float, bool, str). No imports, "
+            "enumerate, map, list, tuple, dict, int, float, bool, str). No imports, "
             "loops, comprehensions, functions or lambdas: write whole-array numpy "
             "instead. The section 'Working with the weights' in your instructions "
             "shows how, with examples."
