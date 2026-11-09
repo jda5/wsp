@@ -156,7 +156,9 @@ def forward_tool(limit: int = 50) -> Tool:
             "Run the current (uncommitted) weights on specific validation examples. "
             "Prints the output layer and stores every layer's activations in the sandbox "
             "as `forward_result`. "
-            f"Each example counts against a budget of {limit} examples in total."
+            f"Each example counts against a budget of {limit} examples in total. "
+            "Use it to look at inputs and understand mistakes, not to score or tune "
+            "designs: `evaluate` is your measure of success."
         ),
         parameters={
             "type": "object",
