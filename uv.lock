@@ -2589,8 +2589,6 @@ source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "claude-agent-sdk" },
-    { name = "jupyter" },
-    { name = "notebook" },
     { name = "python-dotenv" },
     { name = "rich" },
     { name = "tensorflow" },
@@ -2598,6 +2596,8 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "jupyter" },
+    { name = "notebook" },
     { name = "pytest" },
 ]
 
@@ -2605,12 +2605,14 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=2.6.0" },
     { name = "claude-agent-sdk", specifier = ">=0.2.179" },
-    { name = "jupyter", specifier = ">=1.1.1" },
-    { name = "notebook", specifier = ">=7.6.5" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "rich", specifier = ">=15.0" },
     { name = "tensorflow", specifier = ">=2.22.0rc0" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.2.0" }]
+dev = [
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "notebook", specifier = ">=7.6.5" },
+    { name = "pytest", specifier = ">=9.2.0" },
+]

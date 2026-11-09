@@ -45,7 +45,7 @@ class MNISTExperiment(KerasExperiment):
 
         if initial_state == "trained":
             self.model.compile(loss="sparse_categorical_crossentropy", optimizer="adam")
-            self.model.fit(self.data.train.x, self.data.train.y, epochs=4, verbose=2)
+            self.model.fit(self.data.train.x, self.data.train.y, epochs=1, verbose=2)
 
     # -------------------------------------------------------------------------------- what the agent sees
 
