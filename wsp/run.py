@@ -141,6 +141,8 @@ def run(
         "changes_by_tensor": changes,
         "commits": len(workspace.commits),
         "tool_usage": toolbox.usage(),
+        "finished": session.finished,  # False if the run hit max_turns or was stopped
+        "report": session.report,
     }
 
     log.event("end", **summary)

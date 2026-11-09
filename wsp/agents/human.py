@@ -34,7 +34,8 @@ Commands
   budgets             show how much of each tool you have used
   note <text>         write your reasoning to the run log, as an agent would
   code                enter several lines of code; finish with an empty line
-  exit                finish the run (Ctrl-D works too; Ctrl-C clears the line)
+  exit                stop without a report (Ctrl-D works too; Ctrl-C clears
+                      the line). To end properly, use `finish <report>`
 
 Calling tools
   <tool> <arguments>  e.g. `evaluate`, `forward 3 17 42`, `reset baseline`,
@@ -54,13 +55,13 @@ class HumanAgent(BaseAgent):
         self, system: str, prompt: str, toolbox: Toolbox, log: RunLog, max_turns: int
     ) -> None:
         """
-        Read commands from the terminal until `exit`, Ctrl-D or `max_turns`.
-        Each tool call is one turn.
+        Read commands from the terminal until `finish`, `exit`, Ctrl-D or
+        `max_turns`. Each tool call is one turn.
         """
         self._introduce(system, prompt, toolbox)
         turn = 0
 
-        while turn < max_turns:
+        while turn < max_turns and not toolbox.finished:
             try:
                 line = input(f"\n[turn {turn + 1}/{max_turns}] > ").strip()
             except KeyboardInterrupt:  # Ctrl-C clears the line, as in a shell
@@ -101,7 +102,7 @@ class HumanAgent(BaseAgent):
 
                 case "code":
                     turn += 1
-                    self._call(toolbox, "python", {"code": _read_block()})
+                    self._call(toolbox, "python", {"code": _read_block()}, turn, max_turns)
 
                 case _ if command in toolbox.tools:
                     tool = toolbox.tools[command]
@@ -113,13 +114,19 @@ class HumanAgent(BaseAgent):
                         continue
 
                     turn += 1
-                    self._call(toolbox, command, arguments)
+                    self._call(toolbox, command, arguments, turn, max_turns)
 
                 case _:
                     turn += 1
-                    self._call(toolbox, "python", {"code": line})
+                    self._call(toolbox, "python", {"code": line}, turn, max_turns)
 
-        reason = "max_turns" if turn >= max_turns else "human_exit"
+        if toolbox.finished:
+            reason = "finished"
+        elif turn >= max_turns:
+            reason = "max_turns"
+        else:
+            reason = "human_exit"
+
         log.event("agent_stopped", reason=reason, turn=turn)
         print(f"\nRun finished after {turn} turns ({reason}).")
 
@@ -151,10 +158,12 @@ class HumanAgent(BaseAgent):
         print(RULE)
         print(f"\n{prompt}")
 
-    @staticmethod
-    def _call(toolbox: Toolbox, name: str, arguments: dict[str, Any]) -> None:
+    def _call(
+        self, toolbox: Toolbox, name: str, arguments: dict[str, Any], turn: int, max_turns: int
+    ) -> None:
         """
-        Call a tool through the Toolbox and print exactly what an agent would see.
+        Call a tool through the Toolbox and print exactly what an agent would
+        see, including the reminder to wrap up near the end.
         """
         result = toolbox.call(name, arguments)
 
@@ -162,6 +171,10 @@ class HumanAgent(BaseAgent):
             print(f"[error] {result.text}")
         else:
             print(result.text)
+
+        notice = self.turns_left_notice(turn, max_turns, toolbox)
+        if notice and not toolbox.finished:
+            print(f"\n{notice}")
 
 
 # -------------------------------------------------------------------------------- private

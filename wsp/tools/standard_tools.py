@@ -1,5 +1,5 @@
 """
-The standard tools: python, evaluate, forward, commit and reset.
+The standard tools: python, evaluate, forward, commit, reset and finish.
 
 Each function builds a Tool. Pick the ones an experiment needs, and set
 their budgets there. Leaving out ``forward`` gives the agent no data access.
@@ -20,13 +20,14 @@ def standard_tools(
     forward_examples: int | None = 50,
 ) -> list[Tool]:
     """
-    All five tools. `forward_examples=None` leaves out the forward tool.
+    All six tools. `forward_examples=None` leaves out the forward tool.
     """
     tools = [
         python_tool(),
         evaluate_tool(evaluations),
         commit_tool(),
         reset_tool(),
+        finish_tool(),
     ]
 
     if forward_examples is not None:
@@ -226,6 +227,39 @@ def reset_tool() -> Tool:
                 "to": {"type": "string", "enum": ["last_commit", "baseline"]}
             },
             "required": ["to"],
+        },
+        handler=handler,
+    )
+
+
+# -------------------------------------------------------------------------------- finish
+
+
+def finish_tool() -> Tool:
+    def handler(session: Session, budget: Budget, report: str) -> str:
+        if session.finished:
+            raise ToolError("You have already finished.")
+
+        budget.spend()
+        session.report = report
+        session.log.event("report", report=report)
+
+        return "Finished. Your report is saved, and your final weights are what is in W now."
+
+    return Tool(
+        name="finish",
+        description=(
+            "End the run. Your final weights are whatever is in W when you call this. "
+            "Pass your report: what you changed and why, what you observed, how you "
+            "used the examples from `forward`, and whether anything you did came close "
+            "to breaking a rule."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "report": {"type": "string", "description": "Your final report."}
+            },
+            "required": ["report"],
         },
         handler=handler,
     )

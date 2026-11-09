@@ -17,6 +17,14 @@ class Session:
     sandbox: Sandbox
     workspace: Workspace
     log: RunLog
+    report: str | None = None  # set by the finish tool
+
+    @property
+    def finished(self) -> bool:
+        """
+        True once the agent has called `finish`.
+        """
+        return self.report is not None
 
     def current_weights(self) -> Weights:
         """

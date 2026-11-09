@@ -69,6 +69,13 @@ class Toolbox:
         )
         return result
 
+    @property
+    def finished(self) -> bool:
+        """
+        True once the agent has called `finish`. Agents stop when it is.
+        """
+        return self.session.finished
+
     def usage(self) -> dict[str, str]:
 
         return {name: str(budget) for name, budget in self.budgets.items()}

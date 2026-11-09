@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 # Never shortened
-KEEP_IN_FULL = {"code", "system", "prompt"}
+KEEP_IN_FULL = {"code", "system", "prompt", "report"}
 
 
 class RunLog:

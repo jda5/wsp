@@ -31,6 +31,11 @@ class ClaudeAgent(BaseAgent):
         for turn in range(1, max_turns + 1):
             response = self._send(system, messages, toolbox)
             messages.append({"role": "assistant", "content": response.content})
+
+            for block in response.content:
+                print()
+                print(block.model_dump_json(indent=2))
+
             self._record(turn, response, log)
 
             tool_calls = [
@@ -42,6 +47,19 @@ class ClaudeAgent(BaseAgent):
                 return
 
             results = [self._call_tool(call, toolbox) for call in tool_calls]
+
+            if toolbox.finished:
+                log.event("agent_stopped", reason="finished", turn=turn)
+                return
+
+            # A text block after the tool results; it stays in the history, so
+            # the cached prefix is never edited.
+            notice = self.turns_left_notice(turn, max_turns, toolbox)
+            if notice:
+                results.append({"type": "text", "text": notice})
+                log.event("notice", turn=turn, text=notice)
+                print(f"\n{notice}")
+
             messages.append({"role": "user", "content": results})
 
         log.event("agent_stopped", reason="max_turns", turn=max_turns)
