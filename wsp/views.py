@@ -10,8 +10,9 @@ from typing import Any
 
 import numpy as np
 
-MAX_ROWS = 20
-MAX_COLS = 12
+# Big enough for a 28x28 MNIST image in one show() call.
+MAX_ROWS = 50
+MAX_COLS = 30
 
 
 # -------------------------------------------------------------------------------- arrays

@@ -47,7 +47,7 @@ class RunConfig:
 
     tools: list[Tool] = field(default_factory=standard_tools)
     max_turns: int = 50
-    max_output_chars: int = 8_000
+    max_output_chars: int = 25_000  # about 3,000 weights per tool call
     prompt: str | None = None  # overrides experiment.prompt()
 
 
