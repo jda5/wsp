@@ -1,5 +1,5 @@
 """
-Ask Claude, or yourself, to write the weights of an MNIST classifier.
+Ask your agent, or yourself, to write the weights of an MNIST classifier.
 
     uv run python -m examples.mnist --start zeros
     uv run python -m examples.mnist --start trained --evaluations 5
@@ -38,9 +38,13 @@ def main() -> None:
         max_turns=args.max_turns,
     )
 
-    agent: BaseAgent = (
-        HumanAgent() if args.agent == "human" else ClaudeAgent(model=args.model)
-    )
+    match args.agent:
+        case "human":
+            agent: BaseAgent = HumanAgent()
+        case "claude":
+            agent: BaseAgent = ClaudeAgent(model=args.model)
+        case _:
+            raise ValueError(f"Unknown agent: {args.agent}")
 
     run(experiment, agent, config)
 
