@@ -10,8 +10,6 @@ requires-python = ">=3.14"
 dependencies = [
     "anthropic>=2.6.0",
     "claude-agent-sdk>=0.2.179",
-    "jupyter>=1.1.1",
-    "notebook>=7.6.5",
     "python-dotenv>=1.2.4",
     "rich>=15.0",
     "tensorflow>=2.22.0rc0",
@@ -29,4 +27,6 @@ module-name = "wsp"
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "jupyter>=1.1.1",
+    "notebook>=7.6.5",
 ]

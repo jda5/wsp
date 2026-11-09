@@ -9,6 +9,12 @@ Drawing inspiration from [Takehi et al. (2026)](https://rikiyat.github.io/blog/w
 1. Create an agent harness that enables an LLMs to natively read and write neural network weights.
 2. Run experiments on a series of classic ML problems to determine how well frontier LLMs can optimise or build models, soley by editing the model weights.
 
+## Prerequisits
+
+- Python
+- [Docker](https://www.docker.com/) to sandbox the agent.
+- (Optionally) [uv](https://docs.astral.sh/uv/) for package management.
+
 ## Experiments 1: MNIST From Scratch
 
 The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) is a dataset of handwritten digits that is commonly used for training various image processing systems. It is sometimes regarded as the "[Hello, world](https://en.wikipedia.org/wiki/Hello,_world)" of machine learning engineering, so I thought it might be a good place to start.
