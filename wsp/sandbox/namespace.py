@@ -54,7 +54,11 @@ class Namespace:
         before = _copy_weights(self.weights)
         buffer = io.StringIO()
 
-        with np.printoptions(**PRINT_OPTIONS), redirect_stdout(buffer), redirect_stderr(buffer):
+        with (
+            np.printoptions(**PRINT_OPTIONS),
+            redirect_stdout(buffer),
+            redirect_stderr(buffer),
+        ):
             try:
                 self._execute(tree)
             except (Exception, KeyboardInterrupt) as error:
@@ -91,7 +95,7 @@ class Namespace:
         """
         last = None
         if tree.body and isinstance(tree.body[-1], ast.Expr):
-            last = ast.Expression(tree.body.pop().value)
+            last = ast.Expression(tree.body.pop().value)  # type: ignore
 
         exec(compile(tree, "<cell>", "exec"), self.variables)
 
