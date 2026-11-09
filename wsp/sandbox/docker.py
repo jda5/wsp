@@ -312,8 +312,8 @@ def ensure_image() -> str:
     if exists.returncode == 0:
         return tag
 
-    print(f"Building the sandbox image {tag} (first run only)...")
-    subprocess.run(
+    print(f"Building the sandbox image {tag} (after the code changes)...")
+    build = subprocess.run(
         [
             "docker", "build",
             "--file", str(DOCKERFILE),
@@ -321,8 +321,15 @@ def ensure_image() -> str:
             "--tag", tag,
             str(REPOSITORY),
         ],
-        check=True,
+        capture_output=True,
+        text=True,
+        check=False,
     )  # fmt: skip
+
+    # Docker's build output is only worth seeing when the build fails.
+    if build.returncode != 0:
+        raise RuntimeError(f"Building the sandbox image failed:\n{build.stderr}")
+
     return tag
 
 

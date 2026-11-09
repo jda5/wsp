@@ -63,11 +63,15 @@ class ConsoleView:
         )
 
         if self._shows("normal"):
-            usage = ", ".join(f"{name} {used}" for name, used in event["tool_usage"].items())
+            usage = ", ".join(
+                f"{name} {used}" for name, used in event["tool_usage"].items()
+            )
             self.console.print(Text(f"tools        {usage}", style="dim"))
 
     def _on_agent_stopped(self, event: dict) -> None:
-        self.console.print(f"\n[bold]stopped[/] after turn {event['turn']}: {event['reason']}")
+        self.console.print(
+            f"\n[bold]stopped[/] after turn {event['turn']}: {event['reason']}"
+        )
 
     # -------------------------------------------------------------------------------- the agent
 
@@ -76,14 +80,16 @@ class ConsoleView:
             self.console.print(Markdown(event["text"]))
 
     def _on_thinking(self, event: dict) -> None:
-        if self._shows("verbose") and event["text"].strip():
+        if self._shows("normal") and event["text"].strip():
             self.console.print(Text(event["text"], style="dim italic"))
 
     def _on_notice(self, event: dict) -> None:
         self.console.print(Text(event["text"], style="yellow"))
 
     def _on_report(self, event: dict) -> None:
-        self.console.print(Panel(Markdown(event["report"]), title="report", border_style="green"))
+        self.console.print(
+            Panel(Markdown(event["report"]), title="report", border_style="green")
+        )
 
     def _on_usage(self, event: dict) -> None:
         if not self._shows("verbose"):
@@ -134,32 +140,46 @@ class ConsoleView:
 
     def _on_evaluate(self, event: dict) -> None:
         scores = event["scores"]
-        self.console.print(f"[bold green]evaluation[/] (commit #{event['commit']}): {_scalars(scores)}")
+        self.console.print(
+            f"[bold green]evaluation[/] (commit #{event['commit']}): {_scalars(scores)}"
+        )
 
         if self._shows("verbose"):
             self.console.print(views.render_scores(scores))
 
     def _on_samples(self, event: dict) -> None:
         if self._shows("verbose"):
-            self.console.print(Text(f"samples drawn: {_short_list(event['indices'])}", style="dim"))
+            self.console.print(
+                Text(f"samples drawn: {_short_list(event['indices'])}", style="dim")
+            )
 
     def _on_forward(self, event: dict) -> None:
         if self._shows("verbose"):
-            self.console.print(Text(f"forward on: {_short_list(event['indices'])}", style="dim"))
+            self.console.print(
+                Text(f"forward on: {_short_list(event['indices'])}", style="dim")
+            )
 
     def _on_commit(self, event: dict) -> None:
         if self._shows("verbose"):
-            self.console.print(Text(f"commit #{event['number']}: {event['message']}", style="dim"))
+            self.console.print(
+                Text(f"commit #{event['number']}: {event['message']}", style="dim")
+            )
 
     def _on_reset(self, event: dict) -> None:
         if self._shows("normal"):
-            self.console.print(Text(f"reset to {event['to'].replace('_', ' ')}", style="yellow"))
+            self.console.print(
+                Text(f"reset to {event['to'].replace('_', ' ')}", style="yellow")
+            )
 
     def _on_sandbox_restarted(self, event: dict) -> None:
-        self.console.print(Text(f"sandbox restarted: {event['reason']}", style="yellow"))
+        self.console.print(
+            Text(f"sandbox restarted: {event['reason']}", style="yellow")
+        )
 
     def _on_final_weights_invalid(self, event: dict) -> None:
-        self.console.print(Text(f"final weights were invalid: {event['error']}", style="red"))
+        self.console.print(
+            Text(f"final weights were invalid: {event['error']}", style="red")
+        )
 
     def _on_unknown(self, event: dict) -> None:
         if self._shows("verbose"):
@@ -184,7 +204,9 @@ class ConsoleView:
 
         if not self._shows("verbose") and len(lines) > PREVIEW_LINES:
             hidden = len(lines) - PREVIEW_LINES
-            lines = lines[:PREVIEW_LINES] + [f"… {hidden} more lines (use --view verbose)"]
+            lines = lines[:PREVIEW_LINES] + [
+                f"… {hidden} more lines (use --view verbose)"
+            ]
 
         self.console.print(Text("\n".join(lines), style="red" if is_error else ""))
 
@@ -194,7 +216,10 @@ def _scalars(scores: dict) -> str:
     The single-number metrics, e.g. "accuracy 0.5806".
     """
     numbers = {k: v for k, v in scores.items() if isinstance(v, (int, float))}
-    return "  ".join(f"{name} {value:.4f}" for name, value in numbers.items()) or "(no scalar metrics)"
+    return (
+        "  ".join(f"{name} {value:.4f}" for name, value in numbers.items())
+        or "(no scalar metrics)"
+    )
 
 
 def _short_list(values: list, limit: int = 12) -> str:

@@ -4,7 +4,6 @@ Ask your agent, or yourself, to write the weights of an MNIST classifier.
     uv run python -m examples.mnist --start zeros
     uv run python -m examples.mnist --start trained --evaluations 5
     uv run python -m examples.mnist --agent human
-    uv run python -m examples.mnist --view verbose
 
 Follow a run from another terminal with `uv run python -m wsp.watch --follow`.
 """
@@ -27,12 +26,6 @@ def main() -> None:
     parser.add_argument("--max-turns", type=int, default=50)
     parser.add_argument("--agent", choices=["claude", "human"], default="claude")
     parser.add_argument("--model", default="claude-opus-5-5")
-    parser.add_argument(
-        "--view",
-        choices=["quiet", "normal", "verbose"],
-        help="What to show while it runs. Defaults to normal, or quiet for "
-        "--agent human, which prints its own tool results.",
-    )
     args = parser.parse_args()
 
     load_dotenv()
@@ -45,7 +38,6 @@ def main() -> None:
             samples=args.samples,
         ),
         max_turns=args.max_turns,
-        view=args.view or ("quiet" if args.agent == "human" else "normal"),
     )
 
     match args.agent:

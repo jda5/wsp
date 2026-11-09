@@ -16,7 +16,6 @@ import numpy as np
 
 from wsp import views
 from wsp.agents import BaseAgent
-from wsp.console import ConsoleView, Level
 from wsp.experiments import Experiment
 from wsp.log import RunLog
 from wsp.sandbox import DockerSandbox, SandboxError
@@ -98,7 +97,6 @@ class RunConfig:
     max_turns: int = 50
     max_output_chars: int = 25_000  # about 3,000 weights per tool call
     prompt: str | None = None  # overrides experiment.prompt()
-    view: Level | None = "normal"  # what to show in the terminal; None shows nothing
 
 
 def run(
@@ -113,8 +111,8 @@ def run(
     config = config or RunConfig()
 
     folder = Path(root) / f"{experiment.name}-{datetime.now():%Y%m%d-%H%M%S}"
-    listeners = [ConsoleView(config.view)] if config.view else []
-    log = RunLog(folder / "log.jsonl", listeners=listeners)
+    log = RunLog(folder / "log.jsonl")
+    print(f"Logging to {log.path}. Watch it with: uv run python -m wsp.watch --follow")
 
     baseline = experiment.get_weights()
     workspace = Workspace(baseline, folder / "snapshots")
