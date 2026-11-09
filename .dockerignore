@@ -1,0 +1,5 @@
+# Only the wsp package goes into the image. Everything else (.env, .venv,
+# runs/, data) stays out of the build context.
+*
+!wsp/
+wsp/**/__pycache__

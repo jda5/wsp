@@ -1,8 +1,11 @@
-from .checker import ForbiddenCode
-from .sandbox import Execution, Sandbox
+from .base import Execution, SandboxCrashed, SandboxError, SandboxTimeout, Weights
+from .docker import DockerSandbox
 
 __all__ = [
+    "DockerSandbox",
     "Execution",
-    "ForbiddenCode",
-    "Sandbox",
+    "SandboxCrashed",
+    "SandboxError",
+    "SandboxTimeout",
+    "Weights",
 ]

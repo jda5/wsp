@@ -155,6 +155,9 @@ class ConsoleView:
         if self._shows("normal"):
             self.console.print(Text(f"reset to {event['to'].replace('_', ' ')}", style="yellow"))
 
+    def _on_sandbox_restarted(self, event: dict) -> None:
+        self.console.print(Text(f"sandbox restarted: {event['reason']}", style="yellow"))
+
     def _on_final_weights_invalid(self, event: dict) -> None:
         self.console.print(Text(f"final weights were invalid: {event['error']}", style="red"))
 

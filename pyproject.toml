@@ -23,3 +23,8 @@ build-backend = "uv_build"
 # Flat layout: ship the top-level `wsp` package instead of src/wsp.
 module-root = ""
 module-name = "wsp"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

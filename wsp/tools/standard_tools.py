@@ -10,6 +10,7 @@ from typing import Literal
 import numpy as np
 
 from wsp import views
+from wsp.sandbox import SandboxError
 from wsp.session import Session
 from wsp.tools import Budget, Tool, ToolError
 from wsp.workspace import count_changes
@@ -47,7 +48,16 @@ def standard_tools(
 def python_tool() -> Tool:
     def handler(session: Session, budget: Budget, code: str) -> str:
         budget.spend()
-        execution = session.sandbox.run(code)  # raises ForbiddenCode if not allowed
+
+        try:
+            execution = session.sandbox.run(code)
+        except SandboxError as error:
+            session.sandbox.restart(session.workspace.head)
+            session.log.event("sandbox_restarted", reason=str(error))
+            raise ToolError(
+                f"{error} The sandbox was restarted from your last commit; "
+                "variables you created were lost."
+            ) from error
 
         output = execution.output or "(no output)"
         if execution.changed:
@@ -61,20 +71,17 @@ def python_tool() -> Tool:
     return Tool(
         name="python",
         description=(
-            "Run numpy code to view or edit the weights. `W` is a dict of name -> "
-            "numpy array; edit it by index, e.g. `W[name][3] += 0.5`. "
-            "Variables are kept between calls, and the value of the last line is "
-            "printed. Also available: `np`, `show()`, `info()` and simple builtins "
-            "(print, len, range, slice, min, max, sum, abs, round, sorted, zip, "
-            "enumerate, map, list, tuple, dict, int, float, bool, str). No imports, "
-            "loops, comprehensions, functions or lambdas: write whole-array numpy "
-            "instead. The section 'Working with the weights' in your instructions "
-            "shows how, with examples."
+            "Run Python code to view or edit the weights. `W` is a dict of name -> "
+            "numpy array; edit it by index, e.g. `W[name][3] += 0.5`. Variables are "
+            "kept between calls, and the value of the last line is printed. Also "
+            "available: `np`, `show()` and `info()`. The section 'Working with the "
+            "weights' in your instructions shows how, with examples, and says what "
+            "else this environment allows."
         ),
         parameters={
             "type": "object",
             "properties": {
-                "code": {"type": "string", "description": "Numpy code to run."}
+                "code": {"type": "string", "description": "Python code to run."}
             },
             "required": ["code"],
         },

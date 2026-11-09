@@ -7,14 +7,14 @@ from typing import Any
 
 from wsp.experiments import Experiment, Split
 from wsp.log import RunLog
-from wsp.sandbox import Sandbox
+from wsp.sandbox import DockerSandbox
 from wsp.workspace import Commit, Weights, Workspace
 
 
 @dataclass
 class Session:
     experiment: Experiment
-    sandbox: Sandbox
+    sandbox: DockerSandbox
     workspace: Workspace
     log: RunLog
     report: str | None = None  # set by the finish tool

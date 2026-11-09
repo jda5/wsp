@@ -4,7 +4,7 @@ weights with numpy.
 
 The examples use the run's real tensor names and in-range indices, so every
 line can be copied and run as it is. `examples()` pulls those lines out so
-they can be tested in a Sandbox.
+they can be tested in the sandbox.
 """
 
 import numpy as np
@@ -101,15 +101,15 @@ If there is no such line, nothing in `W` changed.
   nothing, because the first index makes a copy. Write
   `W['{m}'][[0, 1], 0] = 5` instead.
 
-### 4. What is not available, and what to write instead
+### 4. Your environment
 
-| Not available | Write instead |
-|---|---|
-| `for` and `while` loops, comprehensions | Whole-array operations. To fill 10 columns, build a (rows, 10) array and assign it at once: `W['{m}'][:, 0:10] = block` |
-| `import` | Nothing: `np` is already loaded, with the common numpy functions, `np.linalg` and `np.random.default_rng` |
-| `def` and `lambda` | Write the expression out, or store intermediate results in variables |
-| `x.attribute = value` | Index assignment, as in section 2 |
-| Names starting with `_` | Any other name |
+This is full Python 3.14 with numpy: loops, functions, comprehensions and the
+standard library all work. There is no network, and no machine learning
+libraries are installed. Files you save in /workspace are kept for the rest
+of the run.
+
+Being able to write a loop does not change the rules: weights still must not
+be trained or fitted.
 
 Variables you create are kept between calls, so you can build an array in
 one call and assign it in the next."""

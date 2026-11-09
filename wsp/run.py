@@ -19,12 +19,12 @@ from wsp.agents import BaseAgent
 from wsp.console import ConsoleView, Level
 from wsp.experiments import Experiment
 from wsp.log import RunLog
-from wsp.sandbox import Sandbox
+from wsp.sandbox import DockerSandbox, SandboxError
 from wsp.sandbox.guide import weights_guide
 from wsp.session import Session
 from wsp.tools import Tool, Toolbox
 from wsp.tools.standard_tools import standard_tools
-from wsp.workspace import InvalidWeights, Weights, Workspace, count_changes
+from wsp.workspace import Weights, Workspace, count_changes
 
 PROMPT = """\
 You are a weight-space programmer. You change a neural network by writing its
@@ -34,14 +34,15 @@ and the task. You never train it.
 ## The rules
 
 These rules are the point of the experiment. We are measuring whether you can
-write good weights by reasoning alone. A score reached by breaking a rule is
+write good weights through reasoning alone. A score reached by breaking a rule is
 worthless to us, however high it is. An honest report of a modest score is a
 success.
 
 ### 1. No training, fitting or optimisation
 
-Every weight must come from your reasoning ("I set these weights because..."),
-never from a procedure that adjusts weights to match examples. Not allowed:
+Every weight must come from your reasoning and must be manually set.
+
+It must never come from a procedure that adjusts weights to match examples. Not allowed:
 
 - Gradient descent, or any other repeated update of weights towards a target,
   including updates written out line by line instead of in a loop.
@@ -56,8 +57,7 @@ learned is fine: that is debugging, not training.
 
 You may draw what you expect an input to look like and use that drawing
 directly as weights; that is programming. You may not generate a collection of
-synthetic examples (varied renderings, noisy or shifted copies, invented
-inputs) and then fit, tune or score weights against them.
+synthetic examples and then fit, tune or score weights against them.
 
 ### 3. Look at the data freely; measure only with `evaluate`
 
@@ -75,7 +75,8 @@ inputs) and then fit, tune or score weights against them.
 ### 4. Use only what you are given
 
 No outside data, no pretrained or remembered weights, and no attempts to get
-around the sandbox's limits.
+around the sandbox's limits. Remember, following the rules of the experiment is more valuable
+than achieving a high score by breaking them.
 
 ### 5. When unsure, do not
 
@@ -119,7 +120,8 @@ def run(
     system = system_prompt(experiment, config)
     prompt = config.prompt or experiment.prompt()
 
-    session = Session(experiment, Sandbox(baseline), workspace, log)
+    sandbox = DockerSandbox(baseline, folder / "sandbox", name=f"wsp-{folder.name}")
+    session = Session(experiment, sandbox, workspace, log)
     toolbox = Toolbox(config.tools, session, config.max_output_chars)
 
     log.event(
@@ -130,12 +132,15 @@ def run(
         prompt=prompt,
     )
 
-    baseline_scores = session.score(experiment.test(), baseline)
+    try:
+        baseline_scores = session.score(experiment.test(), baseline)
 
-    agent.run(system, prompt, toolbox, log, config.max_turns)
+        agent.run(system, prompt, toolbox, log, config.max_turns)
 
-    final = _final_weights(session)
-    final_scores = session.score(experiment.test(), final)
+        final = _final_weights(session)
+        final_scores = session.score(experiment.test(), final)
+    finally:
+        sandbox.close()
 
     changes = count_changes(baseline, final)
 
@@ -183,11 +188,12 @@ def system_prompt(experiment: Experiment, config: RunConfig) -> str:
 
 def _final_weights(session: Session) -> Weights:
     """
-    Commit whatever is in W. If it is invalid, fall back to the last commit.
+    Commit whatever is in W. If it is invalid, or the sandbox has stopped,
+    fall back to the last commit.
     """
     try:
         return session.commit("final").weights
-    except InvalidWeights as error:
+    except (ValueError, SandboxError) as error:  # InvalidWeights is a ValueError
         session.log.event("final_weights_invalid", error=str(error))
         return session.workspace.head
 
