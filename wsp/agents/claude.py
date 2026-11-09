@@ -31,11 +31,6 @@ class ClaudeAgent(BaseAgent):
         for turn in range(1, max_turns + 1):
             response = self._send(system, messages, toolbox)
             messages.append({"role": "assistant", "content": response.content})
-
-            for block in response.content:
-                print()
-                print(block.model_dump_json(indent=2))
-
             self._record(turn, response, log)
 
             tool_calls = [
@@ -58,7 +53,6 @@ class ClaudeAgent(BaseAgent):
             if notice:
                 results.append({"type": "text", "text": notice})
                 log.event("notice", turn=turn, text=notice)
-                print(f"\n{notice}")
 
             messages.append({"role": "user", "content": results})
 
@@ -92,10 +86,7 @@ class ClaudeAgent(BaseAgent):
             return stream.get_final_message()
 
     def _call_tool(self, call: anthropic.types.ToolUseBlock, toolbox: Toolbox) -> dict:
-        print(f"\n> {call.name}: {self._preview(call.input)}")
-
-        result = toolbox.call(call.name, call.input)
-        print(self._preview(result.text, lines=8))
+        result = toolbox.call(call.name, call.input)  # logged by the Toolbox
 
         return {
             "type": "tool_result",
@@ -109,24 +100,9 @@ class ClaudeAgent(BaseAgent):
     ) -> None:
         for block in response.content:
             if block.type == "text":
-                print(f"\n{block.text}")
                 log.event("text", turn=turn, text=block.text)
 
             elif block.type == "thinking":
                 log.event("thinking", turn=turn, text=block.thinking)
 
         log.event("usage", turn=turn, usage=response.usage.model_dump())
-
-    @staticmethod
-    def _preview(value: object, lines: int = 3) -> str:
-        """
-        The first few lines of a value, for printing progress to the terminal.
-        """
-        text = value.get("code", value) if isinstance(value, dict) else value
-        text_lines = str(text).splitlines()
-
-        preview = "\n".join(text_lines[:lines])
-        if len(text_lines) > lines:
-            preview += f"\n  ... ({len(text_lines) - lines} more lines)"
-
-        return preview
