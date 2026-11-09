@@ -2,7 +2,7 @@
 Everything one run needs. Tools receive the session.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from wsp.experiments import Experiment, Split
@@ -18,6 +18,7 @@ class Session:
     workspace: Workspace
     log: RunLog
     report: str | None = None  # set by the finish tool
+    sample_indices: list[int] = field(default_factory=list)  # training examples drawn, in order
 
     @property
     def finished(self) -> bool:

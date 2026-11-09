@@ -225,7 +225,9 @@ def _parse_arguments(tool: Tool, text: str) -> dict[str, Any]:
         raise ValueError(f"`{tool.name}` takes several arguments; pass a JSON object")
 
     if not text:
-        raise ValueError("an argument is required")
+        if tool.parameters.get("required"):
+            raise ValueError("an argument is required")
+        return {}  # the argument is optional, e.g. `forward` runs every sample
 
     name, schema = next(iter(properties.items()))
 

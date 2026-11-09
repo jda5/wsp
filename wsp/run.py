@@ -66,11 +66,13 @@ synthetic examples and then fit, tune or score weights against them.
   classes. Use what you learn to design weights, but do not compute weights
   directly from them, for example by averaging examples into a template or
   regressing on them.
-- `forward` runs validation examples. Use it to understand specific mistakes
-  ("why is this example wrong?"). Do not count accuracy across those examples
-  to choose between designs.
-- `evaluate` is your only measure of success. Its budget is limited, but
-  evaluations you do not use are wasted.
+- `forward` runs the model, with your current weights, on samples you have
+  drawn, and shows every layer's activations. Use it to see how your weights
+  respond to real inputs and to understand mistakes ("why is this one wrong?").
+- `evaluate` is your only measure of success. It scores the validation data,
+  which you never see directly. Choose between designs with `evaluate`, not
+  by counting how many of your samples you get right. Its budget is limited,
+  but evaluations you do not use are wasted.
 
 ### 4. Use only what you are given
 

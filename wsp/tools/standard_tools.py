@@ -1,8 +1,14 @@
 """
-The standard tools: python, samples, evaluate, forward, commit, reset and finish.
+The standard tools: python, samples, forward, evaluate, commit, reset and finish.
 
 Each function builds a Tool. Pick the ones an experiment needs, and set
-their budgets there. Leaving out ``forward`` gives the agent no data access.
+their budgets there.
+
+Each data split has one job:
+
+    training     `samples` to look at, `forward` to run the model on them
+    validation   scores only, through `evaluate`; the agent never sees an example
+    test         scored once, at the end of the run
 """
 
 from typing import Literal
@@ -18,12 +24,11 @@ from wsp.workspace import count_changes
 
 def standard_tools(
     evaluations: int = 10,
-    forward_examples: int | None = 50,
     samples: int | None = 12,
 ) -> list[Tool]:
     """
-    All seven tools. `forward_examples=None` leaves out the forward tool, and
-    `samples=None` the samples tool.
+    All seven tools. `samples=None` gives the agent no training examples,
+    and so leaves out `forward` too, which runs the model on them.
     """
     tools = [
         python_tool(),
@@ -33,11 +38,9 @@ def standard_tools(
         finish_tool(),
     ]
 
-    if forward_examples is not None:
-        tools.append(forward_tool(forward_examples))
-
     if samples is not None:
         tools.append(samples_tool(samples))
+        tools.append(forward_tool())
 
     return tools
 
@@ -109,7 +112,8 @@ def evaluate_tool(limit: int = 10) -> Tool:
     return Tool(
         name="evaluate",
         description=(
-            "Commit the current weights and score them on the validation split. "
+            "Commit the current weights and score them on the validation split, which "
+            "you never see directly: this is your measure of success. "
             f"You have {limit} evaluations in total, so make each one count."
         ),
         parameters={"type": "object", "properties": {}},
@@ -121,57 +125,54 @@ def evaluate_tool(limit: int = 10) -> Tool:
 # -------------------------------------------------------------------------------- forward
 
 
-def forward_tool(limit: int = 50) -> Tool:
-    def handler(session: Session, budget: Budget, indices: list[int]) -> str:
-        split = session.experiment.validation()
-        indices = [int(i) for i in indices]
+def forward_tool() -> Tool:
+    def handler(session: Session, budget: Budget, indices: list[int] | None = None) -> str:
+        drawn = session.sample_indices
+        if not drawn:
+            raise ToolError("There are no samples yet: draw some with `samples` first.")
 
-        if not indices or min(indices) < 0 or max(indices) >= len(split):
-            raise ToolError(f"Indices must be between 0 and {len(split) - 1}.")
+        positions = list(range(len(drawn))) if indices is None else [int(i) for i in indices]
+        if not positions or min(positions) < 0 or max(positions) >= len(drawn):
+            raise ToolError(f"Indices must be positions in `samples`, 0 to {len(drawn) - 1}.")
 
         weights = session.current_weights()
-        budget.spend(len(indices))
+        budget.spend()
+
+        split = session.experiment.train()
+        rows = [drawn[i] for i in positions]
 
         session.experiment.set_weights(weights)
-        activations = session.experiment.activations(split.x[indices])
+        activations = session.experiment.activations(split.x[rows])
+        labels = split.y[rows]
 
-        result = {
-            "indices": np.array(indices),
-            "labels": split.y[indices],
-            "activations": activations,
-        }
-        session.sandbox.put("forward_result", result)
-        session.log.event("forward", indices=indices)
+        session.sandbox.put(
+            "forward_result",
+            {"indices": np.array(positions), "labels": labels, "activations": activations},
+        )
+        session.log.event("forward", indices=positions)
 
         output_layer = list(activations)[-1]
         outputs = activations[output_layer]
         table = views.render_table(
             outputs,
-            row_labels=[
-                f"#{i} (label {label})" for i, label in zip(indices, split.y[indices])
-            ],
+            row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, labels)],
             col_labels=list(range(outputs.shape[1])),
         )
 
-        shapes = ", ".join(
-            f"{name} {array.shape}" for name, array in activations.items()
-        )
+        shapes = ", ".join(f"{name} {array.shape}" for name, array in activations.items())
         return (
-            f"Output layer '{output_layer}' for {len(indices)} validation examples:\n\n{table}\n\n"
+            f"Output layer '{output_layer}' for {len(positions)} of your samples:\n\n{table}\n\n"
             "Every layer's activations are in the sandbox variable `forward_result` "
-            "(keys: indices, labels, activations). "
-            f"Shapes: {shapes}.\n\nExamples: {budget}."
+            f"(keys: indices, labels, activations). Shapes: {shapes}."
         )
 
     return Tool(
         name="forward",
         description=(
-            "Run the current (uncommitted) weights on specific validation examples. "
-            "Prints the output layer and stores every layer's activations in the sandbox "
-            "as `forward_result`. "
-            f"Each example counts against a budget of {limit} examples in total. "
-            "Use it to look at inputs and understand mistakes, not to score or tune "
-            "designs: `evaluate` is your measure of success."
+            "Run the model, with your current (uncommitted) weights, on training examples "
+            "you have drawn with `samples`. Prints the output layer and stores every "
+            "layer's activations in the sandbox as `forward_result`. Use it to see how "
+            "your weights respond to real inputs and to understand mistakes."
         ),
         parameters={
             "type": "object",
@@ -179,13 +180,14 @@ def forward_tool(limit: int = 50) -> Tool:
                 "indices": {
                     "type": "array",
                     "items": {"type": "integer"},
-                    "description": "Positions in the validation split.",
+                    "description": (
+                        "Positions in `samples` (0 is the first example you drew). "
+                        "Leave out to run all of them."
+                    ),
                 }
             },
-            "required": ["indices"],
         },
         handler=handler,
-        limit=limit,
     )
 
 
@@ -208,6 +210,7 @@ def samples_tool(limit: int = 12) -> Tool:
         new = order[budget.used - count : budget.used]
         drawn = order[: budget.used]  # every sample so far, oldest first
 
+        session.sample_indices = drawn.tolist()
         session.sandbox.put(
             "samples", {"indices": drawn, "x": split.x[drawn], "y": split.y[drawn]}
         )
