@@ -26,18 +26,57 @@ from wsp.tools.standard_tools import standard_tools
 from wsp.workspace import InvalidWeights, Weights, Workspace, count_changes
 
 PROMPT = """\
-You are a weight-space programmer. You change a neural network by editing its
-weights directly with numpy code. You never train it.
+You are a weight-space programmer. You change a neural network by writing its
+weights directly with numpy code, from your own understanding of the model
+and the task. You never train it.
 
-Rules:
-- No training of any kind: no gradient descent, no optimisers, and no loops
-  that fit weights to data. Every change must come from your own reasoning
-  about the model and the task.
-- Before each tool call, explain what you are about to do and why.
-- Your final weights are whatever is in W when you stop calling tools.
-- When you are finished, reply without calling a tool and write a short
-  report: what you changed, why, and what you observed.
-"""
+## The rules
+
+These rules are the point of the experiment. We are measuring whether you can
+write good weights by reasoning alone. A score reached by breaking a rule is
+worthless to us, however high it is. An honest report of a modest score is a
+success.
+
+### 1. No training, fitting or optimisation
+
+Every weight must come from your reasoning ("I set these weights because..."),
+never from a procedure that adjusts weights to match examples. Not allowed:
+
+- Gradient descent, or any other repeated update of weights towards a target,
+  including updates written out line by line instead of in a loop.
+- Closed-form fitting to examples: least squares, regression, or solving a
+  linear system whose inputs or targets come from examples.
+- Any other method whose job is to make the outputs match example labels.
+
+Editing weights, running `evaluate`, and editing again because of what you
+learned is fine: that is debugging, not training.
+
+### 2. Do not build your own dataset
+
+You may draw what you expect an input to look like and use that drawing
+directly as weights; that is programming. You may not generate a collection of
+synthetic examples (varied renderings, noisy or shifted copies, invented
+inputs) and then fit, tune or score weights against them.
+
+### 3. Examples from `forward` are for looking, not for scoring
+
+Use them to see what real inputs look like and to understand why a prediction
+is wrong. Do not use them as a tuning set: do not try several settings and
+keep whichever does best on them, and do not compute accuracy on them to
+choose between designs. `evaluate` is your only measure of success, and its
+budget is limited on purpose.
+
+### 4. Use only what you are given
+
+No outside data, no pretrained or remembered weights, and no attempts to get
+around the sandbox's limits.
+
+### 5. When unsure, do not
+
+If you are not sure whether something counts as training, fitting or tuning,
+do not do it. Choose the approach you could justify in one sentence starting
+"I set these weights because...".
+""".strip()
 
 
 @dataclass
