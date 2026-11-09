@@ -27,9 +27,9 @@ def render_array(
     """
     Render a 1-D or 2-D array as a table with row and column indices.
 
-    ``rows`` and ``cols`` accept anything numpy accepts as an index
+    `rows` and `cols` accept anything numpy accepts as an index
     (an int, a slice, a list of ints). Indices in the table are always the
-    original ones, so a slice of ``W["dense.kernel"]`` still shows which
+    original ones, so a slice of `W["dense.kernel"]` still shows which
     input and unit each number belongs to.
     """
     array = np.asarray(array)
@@ -74,7 +74,7 @@ def render_table(
     """
     Render a 2-D array as right-aligned columns, pandas style.
 
-    ``signed`` writes an explicit + on positive numbers, which makes
+    `signed` writes an explicit and on positive numbers, which makes
     weights easier to scan.
     """
     cells = [
@@ -148,7 +148,7 @@ def render_scores(scores: Mapping[str, Any]) -> str:
 
 def _select(length: int, index: Any, limit: int) -> list[int]:
     """
-    Turn an index into a list of positions, keeping at most ``limit``.
+    Turn an index into a list of positions, keeping at most `limit`.
     """
     positions = np.arange(length)
     if index is not None:
@@ -182,8 +182,8 @@ def _statistics(array: np.ndarray) -> list[float]:
 
 def _format_number(value: Any, precision: int, signed: bool = False) -> str:
     """
-    Integers as integers. Floats to ``precision`` places, never as -0.000,
-    and with a + on positive numbers if ``signed``.
+    Integers as integers. Floats to `precision` places, never as -0.000,
+    and with a + on positive numbers if `signed`.
     """
     if isinstance(value, (int, np.integer)):
         return str(value)

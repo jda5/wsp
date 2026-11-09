@@ -1,5 +1,5 @@
 """
-Everything one run needs, in one place. Tools receive the session.
+Everything one run needs. Tools receive the session.
 """
 
 from dataclasses import dataclass
@@ -33,7 +33,7 @@ class Session:
 
     def score(self, split: Split, weights: Weights | None = None) -> dict[str, Any]:
         """
-        Score ``weights`` on ``split``. Uses the last commit by default.
+        Score `weights` on `split`. Uses the last commit by default.
         """
         self.experiment.set_weights(
             weights if weights is not None else self.workspace.head
