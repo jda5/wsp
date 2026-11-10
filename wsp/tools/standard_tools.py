@@ -153,15 +153,22 @@ def forward_tool() -> Tool:
 
         output_layer = list(activations)[-1]
         outputs = activations[output_layer]
-        table = views.render_table(
-            outputs,
-            row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, labels)],
-            col_labels=list(range(outputs.shape[1])),
-        )
+
+        # One output row per sample fits in a table. Outputs at every step of
+        # a sequence do not, so they are only described.
+        if outputs.ndim == 2:
+            table = views.render_table(
+                outputs,
+                row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, labels)],
+                col_labels=list(range(outputs.shape[1])),
+            )
+            summary = f"Output layer '{output_layer}' for {len(positions)} of your samples:\n\n{table}"
+        else:
+            summary = f"Ran {len(positions)} of your samples; output layer '{output_layer}' has shape {outputs.shape}."
 
         shapes = ", ".join(f"{name} {array.shape}" for name, array in activations.items())
         return (
-            f"Output layer '{output_layer}' for {len(positions)} of your samples:\n\n{table}\n\n"
+            f"{summary}\n\n"
             "Every layer's activations are in the sandbox variable `forward_result` "
             f"(keys: indices, labels, activations). Shapes: {shapes}."
         )
@@ -216,8 +223,12 @@ def samples_tool(limit: int = 12) -> Tool:
         )
         session.log.event("samples", indices=new)
 
+        # List the labels only when there is one per example, not one per step.
+        labels = split.y[new]
+        with_labels = f" with labels {labels.tolist()}" if labels.ndim == 1 else ""
+
         return (
-            f"Drew {count} new training examples with labels {split.y[new].tolist()}.\n\n"
+            f"Drew {count} new training examples{with_labels}.\n\n"
             f"All {len(drawn)} drawn so far are in the sandbox variable `samples` "
             f"(keys: indices, x, y); x has shape {split.x[drawn].shape}.\n\n"
             f"Samples: {budget}."
