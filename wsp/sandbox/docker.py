@@ -3,7 +3,7 @@ The Docker sandbox: full Python for the agent, in a container that has
 
     no network        --network none
     no secrets        no environment variables passed in; only two folders mounted
-    no frameworks     the image holds Python and numpy, nothing else (docker/Dockerfile)
+    no frameworks     the image holds Python and numpy, nothing else (Dockerfile, next to this file)
 
 The worker inside (worker.py) keeps the agent's namespace alive. This class
 is the host side: it starts the container, sends requests, and moves data
@@ -32,7 +32,7 @@ from . import wire
 from .base import Execution, SandboxCrashed, SandboxTimeout, Weights
 
 REPOSITORY = Path(__file__).resolve().parents[2]
-DOCKERFILE = REPOSITORY / "docker" / "Dockerfile"
+DOCKERFILE = Path(__file__).resolve().with_name("Dockerfile")
 IMAGE_NAME = "wsp-sandbox"
 
 # Weights larger than this are refused when read back from the container.
