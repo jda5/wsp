@@ -13,10 +13,11 @@ import argparse
 
 from dotenv import load_dotenv
 
-from wsp.agents import BaseAgent, ClaudeAgent, HumanAgent
 from wsp.experiments.cartpole import CartPoleExperiment
 from wsp.run import RunConfig, run
 from wsp.tools.standard_tools import standard_tools
+
+from .utils import get_agent
 
 
 def main() -> None:
@@ -37,14 +38,7 @@ def main() -> None:
         max_turns=args.max_turns,
     )
 
-    match args.agent:
-        case "human":
-            agent: BaseAgent = HumanAgent()
-        case "claude":
-            agent: BaseAgent = ClaudeAgent(model=args.model)
-        case _:
-            raise ValueError(f"Unknown agent: {args.agent}")
-
+    agent = get_agent(args.agent, {"model": args.model})
     run(experiment, agent, config)
 
 
