@@ -3,3 +3,4 @@
 *
 !wsp/
 wsp/**/__pycache__
+wsp/sandbox/Dockerfile
