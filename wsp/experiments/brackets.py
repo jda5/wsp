@@ -1,15 +1,18 @@
 """
-Balanced brackets with a small recurrent network: can an agent write the
-weights of an RNN that decides whether a string like "(()(()))" is balanced?
+Closing brackets with a recurrent network, following Skachkova, Trost,
+Kusmirek and Klakow (2018), "Closing Brackets with Recurrent Neural
+Networks", BlackboxNLP. https://aclanthology.org/W18-5425
 
-A string is balanced when every "(" is closed by a later ")". Checking that
-takes two kinds of memory: a counter of how many brackets are open, and a
-record of whether the count ever went below zero.
+The task is the paper's accuracy task (section 4.2): take a balanced string
+of four kinds of bracket, remove its last bracket, and ask the network which
+closing bracket comes last. The data, its sizes and the network (an Elman
+RNN: one sigmoid hidden layer of 64 units) are as in the paper. The paper's
+Elman RNN, trained, scores 96.6% on this task (its table 2, p = 6/16, n = 4).
 
-The network is trained and validated on strings up to MAX_TRAIN_LENGTH long,
-but the test also has much longer strings, up to MAX_TEST_LENGTH. Networks
-trained with gradient descent tend to fail on those; hand-written weights
-might not.
+Strings are made one bracket at a time (the paper's section 2.1): the first
+bracket opens; then, with probability P_OPEN, a new bracket of a random kind
+opens; otherwise the most recently opened bracket closes, or, if none is
+open, the string ends. Strings average 8 brackets, with a long tail.
 """
 
 import warnings
@@ -19,16 +22,22 @@ import numpy as np
 
 from .base import Split
 from .keras_experiment import KerasExperiment
-from .metrics import binary_classification_metrics
+from .metrics import classification_metrics
 
-MAX_TRAIN_LENGTH = 20
-MAX_TEST_LENGTH = 200
+KINDS = 4  # kinds of bracket, the paper's n
+P_OPEN = 6 / 16  # the paper's p
+OPENING = "([{<"
+CLOSING = ")]}>"
+SYMBOLS = OPENING + CLOSING  # input i is SYMBOLS[i]
 
-# Strings in the test split come in three groups of lengths.
-LENGTH_GROUPS = [(2, 20), (22, 100), (102, 200)]
+# The paper's dataset sizes. It has no validation set; ours is the size of its test set.
+TRAIN_SIZE = 131_072
+VALIDATION_SIZE = 10_000
+TEST_SIZE = 10_000
 
-OPEN = [1.0, 0.0]  # one-hot input for "("
-CLOSE = [0.0, 1.0]  # one-hot input for ")"
+# Accuracy is also reported for three groups of full string lengths. The
+# paper finds trained Elman RNNs perfect up to about 8 brackets, GRUs up to 20.
+LENGTH_GROUPS = [(2, 8), (10, 20), (22, None)]
 
 # Keras warns, every time the model runs, that the rnn layer "destroys" the
 # padding mask. It does use the mask to skip padding; it just doesn't pass it
@@ -37,19 +46,14 @@ warnings.filterwarnings("ignore", message="Layer 'rnn' .* does not support maski
 
 
 class BracketsExperiment(KerasExperiment):
-    def __init__(self, hidden_units: int = 8):
+    def __init__(self, hidden_units: int = 64):
         self.name = "brackets-zeros"
 
         # Each split is drawn with its own seed, so the splits differ.
         self.splits = {
-            "train": _make_strings(2_000, (2, MAX_TRAIN_LENGTH), seed=0),
-            "validation": _make_strings(1_000, (2, MAX_TRAIN_LENGTH), seed=1),
-            "test": _concatenate(
-                [
-                    _make_strings(1_000, lengths, seed=2 + i)
-                    for i, lengths in enumerate(LENGTH_GROUPS)
-                ]
-            ),
+            "train": _make_tasks(TRAIN_SIZE, seed=0),
+            "validation": _make_tasks(VALIDATION_SIZE, seed=1),
+            "test": _make_tasks(TEST_SIZE, seed=2),
         }
 
         super().__init__(_build_model(hidden_units))
@@ -58,36 +62,38 @@ class BracketsExperiment(KerasExperiment):
     # -------------------------------------------------------------------------------- what the agent sees
 
     def description(self) -> str:
+        units = self.model.get_layer("rnn").units
+
         return f"""\
 ## Data
 
-Strings of round brackets, labelled 1 if balanced and 0 if not. A string is
-balanced when every "(" is closed by a later ")": "(()())" is balanced;
-"())(" and "(()" are not. Every string has an even length.
+Balanced strings of four kinds of bracket: () [] {{}} <>. A string is balanced
+when every bracket is closed, by a closing bracket of the same kind, after
+everything opened inside it has been closed: "([]<>)" is balanced; "([)]" is not.
 
-Half the strings are balanced. The unbalanced half is split evenly between
-three kinds:
+Every string is made one bracket at a time. The first bracket opens. Then,
+with probability {P_OPEN} (= 6/16), a new bracket of a random kind opens (each
+kind equally likely). Otherwise, the most recently opened bracket that is still
+open closes; if no bracket is open, the string ends instead. Strings average
+8 brackets, but some are much longer: about 8% are 22 or more, and a few are
+over 100.
 
-- wrong order: as many "(" as ")", but a bracket is closed before it is
-  opened, such as "())(()"
-- extra closes: a balanced string with 2 or 4 extra ")" inserted anywhere,
-  such as "()()))"
-- extra opens: a balanced string with 2 or 4 extra "(" inserted anywhere,
-  such as "(()(()"
+## The task
 
-Strings in `samples` and in `evaluate` are 2 to {MAX_TRAIN_LENGTH} brackets long. The
-final test, run once after you finish, also has strings {LENGTH_GROUPS[1][0]} to {MAX_TEST_LENGTH} brackets
-long, so the network should work for strings of any length.
+Each example is a balanced string with its last bracket removed. The network
+must say which closing bracket comes last: the label is 0 for ")", 1 for "]",
+2 for "}}" and 3 for ">". Each label is equally likely.
 
-Each string is an array of shape (steps, 2), one row per bracket:
-"(" is [1, 0] and ")" is [0, 1]. Strings shorter than the longest in a batch are
-padded at the start with rows of [0, 0]; the network skips those steps.
+Each input is an array of shape (steps, 8), one row per bracket, one-hot over
+the symbols "{SYMBOLS}": input i is 1 for the symbol "{SYMBOLS}"[i]. Inputs
+shorter than the longest in a batch are padded at the start with rows of
+zeros; the network skips those steps.
 
 To read a sample as text:
 
 ```python
 x = samples["x"][0]
-"".join("()"[i] for i in x[x.sum(axis=1) > 0].argmax(axis=1))
+"".join("{SYMBOLS}"[i] for i in x[x.sum(axis=1) > 0].argmax(axis=1))
 ```
 
 ## Model
@@ -97,32 +103,33 @@ x = samples["x"][0]
 ## How they connect
 
 The rnn layer reads the string one bracket at a time, keeping a state h of
-{self.model.get_layer("rnn").units} numbers. h starts at zero, and after each bracket x_t it becomes
+{units} numbers. h starts at zero, and after each bracket x_t it becomes
 
-    h_t = relu(x_t @ rnn.kernel + h_(t-1) @ rnn.recurrent_kernel + rnn.bias)
+    h_t = sigmoid(x_t @ rnn.kernel + h_(t-1) @ rnn.recurrent_kernel + rnn.bias)
 
-so rnn.kernel[0, j] is what a "(" adds to unit j, rnn.kernel[1, j] is what a
-")" adds, and rnn.recurrent_kernel[i, j] is the weight from unit i at the
-previous step to unit j now. The rnn layer outputs h after every step;
-last_state keeps only the final one, which the output layer reads:
+so rnn.kernel[i, j] is what symbol "{SYMBOLS}"[i] adds to unit j, and
+rnn.recurrent_kernel[i, j] is the weight from unit i at the previous step to
+unit j now. Every unit of h is between 0 and 1. The rnn layer outputs h after
+every step; last_state keeps only the final one, which the output layer reads:
 
-    p(balanced) = sigmoid(h_final @ output.kernel + output.bias)
+    p = softmax(h_final @ output.kernel + output.bias)
 
-The prediction is balanced when p is above 0.5. In `forward_result`, the rnn
-activations have shape (samples, steps, units): the state after every bracket.
+Output k is the probability that the last bracket is "{CLOSING}"[k]; the
+prediction is the largest. In `forward_result`, the rnn activations have shape
+(samples, steps, units): the state after every bracket.
 
 ## Metrics
 
-Accuracy, accuracy per class (0 = unbalanced, 1 = balanced), a confusion
-matrix where row = true label and column = predicted label, and accuracy for
-each group of string lengths."""
+Accuracy, accuracy per closing bracket, a confusion matrix where row = true
+bracket and column = predicted bracket, and accuracy for each group of full
+string lengths (counting the missing last bracket): 2-8, 10-20, and 22 or more."""
 
     def prompt(self) -> str:
         return (
-            "Every weight and bias is currently zero, so the model gives every "
-            "string a probability of 0.5 and calls them all unbalanced. Write "
-            "weights that decide whether a string of brackets is balanced, for "
-            "strings of any length.\n\n"
+            "Every weight and bias is currently zero, so the model gives each "
+            "closing bracket a probability of 1/4 and always predicts \")\". "
+            "Write weights that predict the missing last bracket as accurately "
+            "as you can, for strings of any length.\n\n"
             "You may run the network yourself on strings you write, to watch "
             "how its state changes bracket by bracket. Do not generate a "
             "collection of labelled strings to score or tune weights against: "
@@ -141,24 +148,26 @@ each group of string lengths."""
         return self.splits["test"]
 
     def metrics(self, outputs: np.ndarray, labels: np.ndarray) -> dict:
-        return binary_classification_metrics(outputs, labels)
+        return classification_metrics(outputs, labels, num_classes=KINDS)
 
     def score(self, split: Split) -> dict:
         """
-        The usual metrics, plus accuracy for each group of string lengths
-        present in `split`.
+        The usual metrics, plus accuracy for each group of full string lengths.
         """
         outputs = self.predict(split.x)
         scores = self.metrics(outputs, split.y)
 
-        lengths = _lengths(split.x)
-        correct = (outputs[:, 0] > 0.5) == split.y
+        lengths = _lengths(split.x) + 1  # the full string had one more bracket
+        correct = outputs.argmax(axis=1) == split.y
 
         for shortest, longest in LENGTH_GROUPS:
-            in_group = (lengths >= shortest) & (lengths <= longest)
+            in_group = lengths >= shortest
+            if longest is not None:
+                in_group &= lengths <= longest
+
             if in_group.any():
-                key = f"accuracy_length_{shortest}_to_{longest}"
-                scores[key] = float(correct[in_group].mean())
+                name = f"{shortest}_to_{longest}" if longest else f"{shortest}_or_more"
+                scores[f"accuracy_length_{name}"] = float(correct[in_group].mean())
 
         return scores
 
@@ -166,137 +175,71 @@ each group of string lengths."""
 # -------------------------------------------------------------------------------- building blocks
 
 
-def _make_strings(count: int, lengths: tuple[int, int], seed: int) -> Split:
+def _make_tasks(count: int, seed: int) -> Split:
     """
-    `count` strings with even lengths in `lengths`, shuffled and encoded
-    one-hot, padded at the start. Half are balanced. The other half are
-    split evenly between three kinds of unbalanced string, each of which
-    defeats one shortcut, so no single kind of memory is enough:
-
-        wrong order     "())(()"   counts are equal, so "does the count end
-                                   at zero?" calls it balanced
-        extra closes    "(()))"+   a count that stops at zero (as relu does)
-                                   ends at zero, and calls it balanced
-        extra opens     "((())"+   the count never goes below zero, so
-                                   "did it ever go negative?" calls it balanced
+    `count` balanced strings, each with its last bracket removed. x is
+    one-hot and padded at the start; y is the kind of the removed bracket.
     """
     rng = np.random.default_rng(seed)
-    even_lengths = np.arange(lengths[0], lengths[1] + 1, 2)
 
-    strings, labels = [], []
-    for i in range(count):
-        length = int(rng.choice(even_lengths))
+    inputs, labels = [], []
+    for _ in range(count):
+        string = _balanced_string(rng)
+        inputs.append(string[:-1])
+        labels.append(string[-1] - KINDS)  # closing symbols are KINDS..2*KINDS-1
 
-        match i % 6:
-            case 0 | 1 | 2:
-                string = _balanced(length, rng)
-            case 3:
-                string = _wrong_order(length, rng)
-            case 4:
-                string = _with_extra(")", length, rng)
-            case _:
-                string = _with_extra("(", length, rng)
-
-        strings.append(string)
-        labels.append(int(_is_balanced(string)))
-
-    order = rng.permutation(count)
-    x = _encode([strings[i] for i in order])
-    return Split(x, np.array(labels)[order])
+    return Split(_encode(inputs), np.array(labels))
 
 
-def _balanced(length: int, rng: np.random.Generator) -> str:
+def _balanced_string(rng: np.random.Generator) -> list[int]:
     """
-    A random balanced string: shuffle equal numbers of each bracket until
-    the result is balanced.
+    One string from the paper's generator, as symbol indices into SYMBOLS.
     """
+    first = int(rng.integers(KINDS))
+    string, still_open = [first], [first]
+
     while True:
-        string = _shuffled(length // 2, length // 2, rng)
-        if _is_balanced(string):
+        if rng.random() < P_OPEN:
+            kind = int(rng.integers(KINDS))
+            string.append(kind)
+            still_open.append(kind)
+        elif still_open:
+            string.append(KINDS + still_open.pop())
+        else:
             return string
 
 
-def _wrong_order(length: int, rng: np.random.Generator) -> str:
+def _encode(strings: list[list[int]]) -> np.ndarray:
     """
-    Equal numbers of each bracket, in an order that is not balanced.
-    """
-    while True:
-        string = _shuffled(length // 2, length // 2, rng)
-        if not _is_balanced(string):
-            return string
-
-
-def _with_extra(bracket: str, length: int, rng: np.random.Generator) -> str:
-    """
-    A balanced string with 2 or 4 extra copies of `bracket` inserted at
-    random places (2 or 4, so the length stays even).
-    """
-    extra = int(rng.choice([2, 4] if length >= 4 else [2]))
-    brackets = list(_balanced(length - extra, rng))
-
-    for _ in range(extra):
-        brackets.insert(int(rng.integers(len(brackets) + 1)), bracket)
-
-    return "".join(brackets)
-
-
-def _shuffled(opens: int, closes: int, rng: np.random.Generator) -> str:
-    brackets = list("(" * opens + ")" * closes)
-    rng.shuffle(brackets)
-    return "".join(brackets)
-
-
-def _is_balanced(string: str) -> bool:
-    depth = 0
-    for bracket in string:
-        depth += 1 if bracket == "(" else -1
-        if depth < 0:
-            return False
-    return depth == 0
-
-
-def _encode(strings: list[str]) -> np.ndarray:
-    """
-    One-hot, shape (strings, longest, 2), padded with zero rows at the start.
+    One-hot, shape (strings, longest, 8), padded with zero rows at the start.
+    Stored as uint8 to keep the 131,072 training strings small.
     """
     longest = max(len(s) for s in strings)
-    x = np.zeros((len(strings), longest, 2), dtype=np.float32)
+    x = np.zeros((len(strings), longest, len(SYMBOLS)), dtype=np.uint8)
 
     for i, string in enumerate(strings):
         start = longest - len(string)
-        x[i, start:] = [OPEN if bracket == "(" else CLOSE for bracket in string]
+        x[i, np.arange(start, longest), string] = 1
 
     return x
 
 
 def _lengths(x: np.ndarray) -> np.ndarray:
     """
-    How many brackets each encoded string has, ignoring padding.
+    How many brackets each encoded input has, ignoring padding.
     """
     return (x.sum(axis=2) > 0).sum(axis=1)
-
-
-def _concatenate(splits: list[Split]) -> Split:
-    """
-    Join splits whose strings have different padded lengths.
-    """
-    longest = max(split.x.shape[1] for split in splits)
-    padded = [
-        np.pad(split.x, ((0, 0), (longest - split.x.shape[1], 0), (0, 0)))
-        for split in splits
-    ]
-    return Split(np.concatenate(padded), np.concatenate([s.y for s in splits]))
 
 
 def _build_model(hidden_units: int) -> keras.Model:
     return keras.Sequential(
         [
-            keras.Input(shape=(None, 2)),
+            keras.Input(shape=(None, len(SYMBOLS))),
             keras.layers.Masking(mask_value=0.0, name="padding"),
             keras.layers.SimpleRNN(
-                hidden_units, activation="relu", return_sequences=True, name="rnn"
+                hidden_units, activation="sigmoid", return_sequences=True, name="rnn"
             ),
             keras.layers.Lambda(lambda states: states[:, -1], name="last_state"),
-            keras.layers.Dense(1, activation="sigmoid", name="output"),
+            keras.layers.Dense(KINDS, activation="softmax", name="output"),
         ]
     )

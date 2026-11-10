@@ -1,6 +1,6 @@
 """
 Ask your agent, or yourself, to write the weights of a recurrent network that
-decides whether a string of brackets is balanced, starting from all zeros.
+predicts the missing last bracket of a balanced string (Skachkova et al., 2018).
 
     uv run python -m examples.brackets
     uv run python -m examples.brackets --samples 20 --evaluations 5
