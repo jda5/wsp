@@ -20,7 +20,6 @@ from wsp.tools.standard_tools import standard_tools
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", choices=["zeros", "trained"], default="zeros")
     parser.add_argument("--evaluations", type=int, default=10)
     parser.add_argument("--samples", type=int, default=12)
     parser.add_argument("--max-turns", type=int, default=50)
@@ -30,7 +29,7 @@ def main() -> None:
 
     load_dotenv()
 
-    experiment = MNISTExperiment(initial_state=args.start)
+    experiment = MNISTExperiment()
 
     config = RunConfig(
         tools=standard_tools(

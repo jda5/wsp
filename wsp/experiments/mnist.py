@@ -4,7 +4,6 @@ of a digit classifier?
 """
 
 from dataclasses import dataclass
-from typing import Literal
 
 import keras
 import numpy as np
@@ -13,39 +12,15 @@ from .base import Split
 from .keras_experiment import KerasExperiment
 from .metrics import classification_metrics
 
-InitialState = Literal["zeros", "trained"]
-
-PROMPTS: dict[InitialState, str] = {
-    "zeros": (
-        "Every weight and bias is currently zero, so the model predicts the same "
-        "probabilities for every image. Write weights that classify handwritten "
-        "digits as accurately as you can."
-    ),
-    "trained": (
-        "The model has been trained and is already accurate. Study its weights, "
-        "work out what it has learned, and improve its accuracy by editing them."
-    ),
-}
-
 
 class MNISTExperiment(KerasExperiment):
-    def __init__(
-        self,
-        initial_state: InitialState = "zeros",
-        validation_size: int = 5_000,
-    ):
-        self.name = f"mnist-{initial_state}"
-        self.initial_state: InitialState = initial_state
+    def __init__(self, validation_size: int = 5_000):
+        self.name = "mnist-zeros"
         self.data = _load_dataset(validation_size)
 
         super().__init__(_build_model())
 
-        if initial_state == "zeros":
-            self.zero_weights()
-
-        if initial_state == "trained":
-            self.model.compile(loss="sparse_categorical_crossentropy", optimizer="adam")
-            self.model.fit(self.data.train.x, self.data.train.y, epochs=1, verbose=2)
+        self.zero_weights()
 
     # -------------------------------------------------------------------------------- what the agent sees
 
@@ -75,7 +50,11 @@ Accuracy, accuracy per digit, and a confusion matrix where row = true digit
 and column = predicted digit."""
 
     def prompt(self) -> str:
-        return PROMPTS[self.initial_state]
+        return (
+            "Every weight and bias is currently zero, so the model predicts the same "
+            "probabilities for every image. Write weights that classify handwritten "
+            "digits as accurately as you can."
+        )
 
     # -------------------------------------------------------------------------------- the data
 
@@ -108,9 +87,8 @@ def _load_dataset(validation_size: int = 5_000) -> MNISTData:
     images held out for validation.
     """
     (X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
-
-    X_train = X_train / 255.0
-    X_test = X_test / 255.0
+    X_train, y_train = np.asarray(X_train) / 255.0, np.asarray(y_train)
+    X_test, y_test = np.asarray(X_test) / 255.0, np.asarray(y_test)
 
     return MNISTData(
         train=Split(X_train[:-validation_size], y_train[:-validation_size]),
