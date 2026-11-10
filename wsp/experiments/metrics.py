@@ -22,3 +22,16 @@ def classification_metrics(
         "accuracy_per_class": confusion.diagonal() / confusion.sum(axis=1),
         "confusion_matrix": confusion,
     }
+
+
+def binary_classification_metrics(
+    outputs: np.ndarray, labels: np.ndarray
+) -> dict[str, float | np.ndarray]:
+    """
+    The same metrics for a model with one sigmoid output, the probability of
+    class 1. It predicts class 1 when that is above 0.5.
+    """
+    probability = outputs.reshape(-1)
+    both_classes = np.column_stack([1 - probability, probability])
+
+    return classification_metrics(both_classes, labels, num_classes=2)

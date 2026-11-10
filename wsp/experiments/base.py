@@ -4,7 +4,7 @@ and what "good" means. The rest of the harness talks only to this class.
 
 Subclasses fill in three groups of methods:
 
-    what the agent is told    description, prompt
+    what the agent is told    description, prompt (and optionally sandbox_variables)
     the data                  train, validation, test, metrics
     the model                 get_weights, set_weights, predict, activations
 
@@ -47,6 +47,14 @@ class Experiment(ABC):
         """
         The first message to the agent: what to do from this starting point.
         """
+
+    def sandbox_variables(self) -> dict[str, Any]:
+        """
+        Extra variables placed in the agent's sandbox at the start, e.g. a
+        vocabulary that maps input indices to words. Values are arrays,
+        numbers, or dicts of them. None by default.
+        """
+        return {}
 
     # -------------------------------------------------------------------------------- the data
 

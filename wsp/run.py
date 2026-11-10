@@ -121,6 +121,9 @@ def run(
     prompt = config.prompt or experiment.prompt()
 
     sandbox = DockerSandbox(baseline, folder / "sandbox", name=f"wsp-{folder.name}")
+    for name, value in experiment.sandbox_variables().items():
+        sandbox.put(name, value)
+
     session = Session(experiment, sandbox, workspace, log)
     toolbox = Toolbox(config.tools, session, config.max_output_chars)
 

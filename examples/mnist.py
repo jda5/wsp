@@ -12,11 +12,10 @@ import argparse
 
 from dotenv import load_dotenv
 
+from examples.utils import get_agent
 from wsp.experiments.mnist import MNISTExperiment
 from wsp.run import RunConfig, run
 from wsp.tools.standard_tools import standard_tools
-
-from .utils import get_agent
 
 
 def main() -> None:
