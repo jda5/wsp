@@ -13,7 +13,7 @@ import argparse
 
 from dotenv import load_dotenv
 
-from examples.utils import get_agent
+from examples.utils import agent_arguments, get_agent
 from wsp.experiments.cartpole import CartPoleExperiment
 from wsp.run import RunConfig, run
 from wsp.tools.standard_tools import standard_tools
@@ -23,8 +23,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evaluations", type=int, default=10)
     parser.add_argument("--max-turns", type=int, default=50)
-    parser.add_argument("--agent", choices=["claude", "human"], default="claude")
-    parser.add_argument("--model", default="claude-opus-5-5")
+    agent_arguments(parser)
     args = parser.parse_args()
 
     load_dotenv()
@@ -37,7 +36,7 @@ def main() -> None:
         max_turns=args.max_turns,
     )
 
-    agent = get_agent(args.agent, {"model": args.model})
+    agent = get_agent(args.agent, {"model": args.model, "effort": args.effort})
     run(experiment, agent, config)
 
 
