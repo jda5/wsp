@@ -6,7 +6,7 @@ A classic problem that is hard for neural networks to learn (Lang and
 Witbrock, 1988). There is no known recipe for its weights, so the agent has
 to work out for itself how to carve up the plane with ReLU units.
 
-Both spirals follow one formula, which the agent is told:
+Both spirals follow one formula:
 
     angle  a  between START_ANGLE and END_ANGLE
     radius r = a / END_ANGLE
@@ -14,6 +14,9 @@ Both spirals follow one formula, which the agent is told:
     spiral 1: (x, y) = (-r cos a, -r sin a)    (spiral 0 turned half a turn)
 
 plus a little Gaussian noise on every point.
+
+The formula is a secret: the agent is told only that the points have two
+classes, and must find the pattern in the samples it draws.
 """
 
 import keras
@@ -49,21 +52,11 @@ class SpiralsExperiment(KerasExperiment):
         return f"""\
 ## Data
 
-Two spirals: points in the plane, each on one of two interleaved spirals,
-labelled 0 or 1 by which spiral it is on. Half the points are on each.
+Points (x, y) in the plane, each labelled 0 or 1. Half the points are in each
+class. Every coordinate lies roughly between -1 and 1.
 
-Every point is made by the same formula. Pick an angle a uniformly between
-{START_ANGLE:.4f} (pi/2) and {END_ANGLE:.4f} (pi/2 + {TURNS} turns), and let the
-radius be r = a / {END_ANGLE:.4f}, so r grows from about {START_ANGLE / END_ANGLE:.3f} to 1. Then:
-
-- spiral 0: (x, y) = ( r cos a,  r sin a)
-- spiral 1: (x, y) = (-r cos a, -r sin a), which is spiral 0 turned by half a turn
-
-Finally, Gaussian noise with standard deviation {NOISE} is added to x and to y.
-
-Each spiral winds {TURNS} times around the centre, anticlockwise as it moves
-outwards. Along any line from the centre the two spirals alternate, about
-{np.pi / END_ANGLE:.3f} apart.
+How the points were made is not given: there is a pattern, and finding it
+from the samples you draw is part of the task.
 
 ## Model
 
@@ -72,21 +65,26 @@ outwards. Along any line from the centre the two spirals alternate, about
 ## How they connect
 
 Input 0 is x and input 1 is y. The output is the probability that the point
-is on spiral 1; the prediction is spiral 1 when it is above 0.5.
+is in class 1; the prediction is class 1 when it is above 0.5.
 
 ## Metrics
 
-Accuracy, accuracy per spiral (0 and 1), and a confusion matrix where
-row = true spiral and column = predicted spiral."""
+Accuracy, accuracy per class (0 and 1), and a confusion matrix where
+row = true class and column = predicted class."""
 
     def prompt(self) -> str:
         return (
             "Every weight and bias is currently zero, so the model gives every "
-            "point a probability of 0.5 and puts them all on spiral 0. Write "
-            "weights that tell the two spirals apart as accurately as you can.\n\n"
+            "point a probability of 0.5 and puts them all in class 0. Write "
+            "weights that tell the two classes apart as accurately as you can.\n\n"
+            "You are not told how the points were made: finding the pattern in "
+            "the samples is part of the task. Study them as much as you like. "
+            "If you describe the pattern with a formula, choose its constants by "
+            "reasoning about what you see, not by fitting the formula to the "
+            "samples (for example with least squares or a search over values).\n\n"
             "You may run the network yourself on any points you like, for "
-            "example to draw a map of which spiral it predicts where. Do not "
-            "generate your own labelled spiral points to score or tune weights "
+            "example to draw a map of which class it predicts where. Do not "
+            "generate your own labelled points to score or tune weights "
             "against: `evaluate` is your only measure."
         )
 
