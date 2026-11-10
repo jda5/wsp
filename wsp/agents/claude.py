@@ -7,13 +7,20 @@ from wsp.tools import Toolbox
 
 from .base import BaseAgent
 
+# Sent after a turn the output limit cut off. The model is not told why a turn
+# ended, so without it the agent might think it had finished.
+CUT_OFF_NOTICE = (
+    "[Your last turn reached the output limit and was cut off. "
+    "Carry on from where you were.]"
+)
+
 
 class ClaudeAgent(BaseAgent):
     def __init__(
         self,
         model: str = "claude-opus-5-5",
         effort: str = "high",
-        max_tokens: int = 32_000,
+        max_tokens: int = 128_000,  # the most Opus 5.5 and Fable 5.2 allow; needs streaming
     ):
         self.name = model
         self.model = model
@@ -37,15 +44,24 @@ class ClaudeAgent(BaseAgent):
                 block for block in response.content if block.type == "tool_use"
             ]
 
-            if response.stop_reason != "tool_use" or not tool_calls:
+            if response.stop_reason == "max_tokens":
+                # The turn was cut off by the output limit: tell the agent and
+                # carry on. A tool call it was writing is answered but not run,
+                # since every call needs a result and a half-written one is unsafe.
+                results = [self._cut_off(call) for call in tool_calls]
+                results.append({"type": "text", "text": CUT_OFF_NOTICE})
+                log.event("notice", turn=turn, text=CUT_OFF_NOTICE)
+
+            elif response.stop_reason != "tool_use" or not tool_calls:
                 log.event("agent_stopped", reason=response.stop_reason, turn=turn)
                 return
 
-            results = [self._call_tool(call, toolbox) for call in tool_calls]
+            else:
+                results = [self._call_tool(call, toolbox) for call in tool_calls]
 
-            if toolbox.finished:
-                log.event("agent_stopped", reason="finished", turn=turn)
-                return
+                if toolbox.finished:
+                    log.event("agent_stopped", reason="finished", turn=turn)
+                    return
 
             # A text block after the tool results; it stays in the history, so
             # the cached prefix is never edited.
@@ -84,6 +100,17 @@ class ClaudeAgent(BaseAgent):
             cache_control={"type": "ephemeral"},
         ) as stream:
             return stream.get_final_message()
+
+    def _cut_off(self, call: anthropic.types.ToolUseBlock) -> dict:
+        """
+        The result for a tool call that the output limit cut off mid-way.
+        """
+        return {
+            "type": "tool_result",
+            "tool_use_id": call.id,
+            "content": "This call was cut off by the output limit before it was complete, so it did not run.",
+            "is_error": True,
+        }
 
     def _call_tool(self, call: anthropic.types.ToolUseBlock, toolbox: Toolbox) -> dict:
         result = toolbox.call(call.name, call.input)  # logged by the Toolbox

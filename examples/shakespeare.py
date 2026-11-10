@@ -27,7 +27,7 @@ def main() -> None:
     parser.add_argument("--evaluations", type=int, default=10)
     parser.add_argument("--samples", type=int, default=12)
     parser.add_argument("--max-turns", type=int, default=50)
-    agent_arguments(parser, model="claude-fable-5-2")
+    agent_arguments(parser, model="claude-opus-5-5")
     args = parser.parse_args()
 
     load_dotenv()
