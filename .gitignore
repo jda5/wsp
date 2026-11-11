@@ -230,5 +230,5 @@ evals/fashion_mnist/trained_fashion_mnist_model.keras
 # Notes
 notes/
 
-# MacOS Nonsense
+# MacOS nonsense
 .DS_Store
