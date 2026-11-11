@@ -18,7 +18,7 @@ import argparse
 from dotenv import load_dotenv
 
 from examples.utils import agent_arguments, get_agent
-from wsp.experiments.shakespeare import ShakespeareExperiment
+from wsp.experiments.shakespeare_pretrained import ShakespearePretrainedExperiment
 from wsp.run import RunConfig, run
 from wsp.tools.standard_tools import standard_tools
 
@@ -33,7 +33,7 @@ def main() -> None:
 
     load_dotenv()
 
-    experiment = ShakespeareExperiment()
+    experiment = ShakespearePretrainedExperiment()
 
     config = RunConfig(
         tools=standard_tools(

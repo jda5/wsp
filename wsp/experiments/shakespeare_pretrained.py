@@ -28,7 +28,7 @@ SEQUENCE_LENGTH = 100
 PRETRAINED_WEIGHTS = Path(__file__).parent / "shakespeare-lstm.weights.h5"
 
 
-class ShakespeareExperiment(KerasExperiment):
+class ShakespearePretrainedExperiment(KerasExperiment):
     def __init__(self, hidden_units: int = 256, weights: Path = PRETRAINED_WEIGHTS):
         self.name = "shakespeare-pretrained"
 
