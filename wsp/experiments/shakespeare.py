@@ -1,16 +1,19 @@
 """
-Shakespeare, one character at a time: can an agent write the weights of an
-LSTM that predicts the next character of a play, starting from all zeros?
+Shakespeare, one character at a time: can an agent improve, by hand, the
+weights of an LSTM that predicts the next character of a play?
 
-The data is "tiny Shakespeare" (about 1.1 million characters), the text used
-by Karpathy's char-rnn, the TensorFlow tutorial and Geron's book. The score
+The agent starts from a model trained with gradient descent for only 6 epochs
+(shakespeare-lstm.weights.h5, beside this file): 2.962 bits per character and
+39.9% accuracy on the test text. Trained to convergence (49 epochs, early
+stopping) the same architecture reaches 2.445 bits and 51.3%, so there is
+plenty of room to improve, without training.
+
+The data is "tiny Shakespeare" (about 1.1 million characters). The score
 is bits per character: how surprised the model is, on average, by the true
 next character. Lower is better; guessing uniformly scores log2(65) = 6.02.
-
-Unlike the other experiments there is no 100%: every bit of knowledge about
-English, and every bit of memory the agent builds into the LSTM, should lower
-the score a little.
 """
+
+from pathlib import Path
 
 import keras
 import numpy as np
@@ -19,18 +22,21 @@ from .base import Split
 from .keras_experiment import KerasExperiment
 
 URL = "https://storage.googleapis.com/download.tensorflow.org/data/shakespeare.txt"
-SEQUENCE_LENGTH = 100  # characters per example; the LSTM starts afresh on each
+SEQUENCE_LENGTH = 100
+
+# Saved by Keras after 6 epochs of Adam (batch 64) on the training split below
+PRETRAINED_WEIGHTS = Path(__file__).parent / "shakespeare-lstm.weights.h5"
 
 
 class ShakespeareExperiment(KerasExperiment):
-    def __init__(self, hidden_units: int = 256):
-        self.name = "shakespeare-zeros"
+    def __init__(self, hidden_units: int = 256, weights: Path = PRETRAINED_WEIGHTS):
+        self.name = "shakespeare-pretrained"
 
         text = open(keras.utils.get_file("shakespeare.txt", URL)).read()
         self.vocab = np.array(sorted(set(text)))
         ids = np.searchsorted(self.vocab, list(text))
 
-        # The first 90% of the text for training, then 5% each, as in Geron's book.
+        # The first 90% of the text for training, then 5% each
         a, b = int(len(ids) * 0.90), int(len(ids) * 0.95)
         self.splits = {
             "train": _passages(ids[:a]),
@@ -39,7 +45,7 @@ class ShakespeareExperiment(KerasExperiment):
         }
 
         super().__init__(_build_model(len(self.vocab), hidden_units))
-        self.zero_weights()
+        self.model.load_weights(weights)
 
     # -------------------------------------------------------------------------------- what the agent sees
 
@@ -113,15 +119,16 @@ p[k] is the probability that the next character is vocab[k].
 
     def prompt(self) -> str:
         return (
-            "Every weight and bias is currently zero, so the model gives every "
-            f"character the same probability and scores {np.log2(len(self.vocab)):.2f} "
-            "bits per character. Write weights that predict the next character "
-            "as well as you can.\n\n"
-            "Your own knowledge of English and of Shakespeare is yours to use: "
-            "how common letters and words are, what tends to follow what, how "
-            "the plays are laid out. What you may not do is count characters or "
-            "words in the samples and turn the counts into weights: that is "
-            "fitting the weights to examples.\n\n"
+            "The weights you start with were trained with gradient descent, but "
+            "only for a few epochs, and the model is underperforming: it scores "
+            "about 2.96 bits per character and 40% accuracy. From other "
+            "experiments we know this same architecture can reach an accuracy "
+            "above 50%. Improve the model by changing its weights by hand.\n\n"
+            "These weights are yours to keep, inspect and edit. Do not train "
+            "them any further: no gradient descent, and no other procedure that "
+            "fits them to examples. Work out what the network has learned and "
+            "what it is missing, then change the weights from your own "
+            "reasoning.\n\n"
             "You may run the network yourself on text you write, to watch its "
             "state and predictions. Do not score or tune weights against text "
             "you generate: `evaluate` is your only measure."

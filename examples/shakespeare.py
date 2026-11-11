@@ -1,9 +1,10 @@
 """
-Ask your agent, or yourself, to write the weights of a character-level LSTM
-that predicts Shakespeare, starting from all zeros.
+Ask your agent, or yourself, to improve by hand the weights of a
+character-level LSTM that predicts Shakespeare, starting from a model trained
+with gradient descent for only 6 epochs.
 
     uv run python -m examples.shakespeare
-    uv run python -m examples.shakespeare --samples 20 --evaluations 5
+    uv run python -m examples.shakespeare --samples 12 --evaluations 10 --max-turns 50
     uv run python -m examples.shakespeare --agent human
 
 After the run, a passage generated from the final weights is printed and
@@ -24,9 +25,9 @@ from wsp.tools.standard_tools import standard_tools
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--evaluations", type=int, default=10)
-    parser.add_argument("--samples", type=int, default=12)
-    parser.add_argument("--max-turns", type=int, default=50)
+    parser.add_argument("--evaluations", type=int, default=20)
+    parser.add_argument("--samples", type=int, default=20)
+    parser.add_argument("--max-turns", type=int, default=100)
     agent_arguments(parser, model="claude-opus-5-5")
     args = parser.parse_args()
 
