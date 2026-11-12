@@ -1,28 +1,3 @@
-"""
-Handwriting for production: the agent writes the starting weights of the
-handwriting network, and all that counts is the model that training makes of
-them.
-
-The same data, model, tools and metrics as HandwritingExperiment, which asks
-a research question: can reasoning alone write good weights? Here the
-question is practical, and three things change:
-
-    the rules       The agent may fit to the training lines in any way that
-                    helps. Only the validation lines stay out of sight.
-    the aim         The weights start the notebook's training, so they must
-                    hold on lines the agent has not seen. `evaluate` is the
-                    measure, and the agent is asked to build what is true of
-                    handwriting, not of its training lines. Direction and
-                    strategy are left to the agent.
-    one metric      `window_error`: how far the window is from where the pen
-                    is writing. It shows whether the window follows the
-                    writing, which the loss alone does not.
-
-The splits are HandwritingExperiment's: bands of the lines the notebook
-trains on. The notebook's own validation and test lines stay unseen by the
-agent, and they are what makes the comparison of trained models honest.
-"""
-
 import inspect
 from pathlib import Path
 
@@ -37,47 +12,51 @@ DATA = Path(__file__).resolve().parents[2] / "data"
 # of lines, so `forward` runs only a few at a time.
 FORWARD_LINES = 8
 
-RULES = """\
-You are a weight-space programmer. You write a neural network's weights
-directly with numpy code. Your weights will be the starting point for training
-the network with gradient descent.
+
+PROMPT = """\
+You are a weight-space programmer. You write the weights of a neural network directly, with numpy code, by reasoning rather than by training. Your weights will be the starting point for training the network with gradient descent, in place of a random initialisation.
+
+Your task is to get the best score on `evaluate` that you can. The best results tend to come from understanding the structure of the task and its data, and building the network to match it. Reason out as many values as you can by hand: choose them, check them and adjust them yourself. Fit only what reasoning cannot pin down.
 
 ## The rules
 
-This is a production run. Your weights are judged on `evaluate`, and nothing is
-judged on how you made them. So there are few rules.
+A score reached by breaking a rule is worthless, however high it is.
 
-### 1. The training data is yours to use
+### 1. No automated optimisation of the weights
 
-`samples` gives you training examples, as many as its budget allows. Measure
-them, fit to them and compute your own loss on them, in any way that helps:
-statistics, least squares, regression, clustering, a search over a constant.
+Do not write code that repeatedly adjusts weights to improve a score: no gradient descent, Adam, evolutionary search, coordinate search or anything like them, whole or layer by layer.
 
-What you bring that a script could not is the reasoning: which structure to
-build, and how to wire it. Fit the numbers that structure needs.
+Everything else is open to you. This includes, and is not limited to:
 
-### 2. `evaluate` is held out
+- setting weights and biases by hand, from your analysis and understanding of the data, the task and the network's architecture;
+- measuring the data (statistics, counts, distributions) and turning what you find into weights;
+- closed-form fits on the training examples, such as least squares, regression or clustering;
+- trying a few values you chose, checking them and adjusting them yourself;
+- any other method you judge fit, as long as it is not an automated optimisation loop.
 
-`evaluate` scores the validation data, which you never see. It tells you
-whether what you built and fitted on the training data holds on new data, so
-choose between designs with it. Weights that capture how the task works will
-hold there; weights that capture the particular examples you fitted will not.
-Its budget is limited.
+### 2. Use only what you are given
 
-### 3. Leave the training to the training
+Your only data is the training examples from `samples`, up to its budget. Do not use outside data or generate synthetic examples. Do not try to get around the sandbox's limits.
 
-Do not optimise the network's weights with any iterative method (gradient
-descent, Adam, evolutionary or coordinate search), whole or layer by layer.
-That happens next, on a GPU, far faster than numpy can do it here.
+### 3. `evaluate` is held out
 
-### 4. Use only what you are given
+`evaluate` scores the network on validation data, which you never see. Use it to choose between designs, not to tune toward that data. Its budget is limited.
 
-No outside data, and no attempts to get around the sandbox's limits.
+### 4. Do not exploit the dataset
 
-### 5. Say what you did
+Build what is true of the task, not of this dataset. Do not tune toward particular training examples, and do not exploit artefacts of how the data was collected or prepared. Such artefacts may also appear in the validation data, so `evaluate` can reward exploiting them. Do not let it: a score earned that way breaks this rule.
 
-In your report, say which numbers you reasoned out and which you fitted, and
-to what.
+### 5. Keep the network trainable
+
+Where trainability and a small gain in score pull apart, trainability comes first.
+
+- Avoid saturation. A unit or gate pushed far into the flat part of its activation (for example, a sigmoid or tanh with pre-activations like ±20) passes almost no gradient, so training will barely change it. Use the smallest weights that do the job.
+- Do not leave units at exactly zero. A unit whose weights are all zero outputs zero and receives zero gradient, so it can never learn. Give every unit you do not use small random incoming weights, and use the usual initial biases for its kind of layer. Keep the weights from those units into your circuits and into the outputs at zero or very small, so their noise does not disturb what you built.
+- Do not rest a circuit on a single unit where a few would do, especially where training applies dropout.
+
+### 6. Say what you did
+
+In your report, say which numbers you reasoned out and why, which you fitted and to what, and how your choices follow from the structure of the network and the data.
 """.strip()
 
 
@@ -102,7 +81,7 @@ class HandwritingProductionExperiment(HandwritingExperiment):
     # -------------------------------------------------------------------------------- what the agent sees
 
     def rules(self) -> str:
-        return RULES
+        return PROMPT
 
     def description(self) -> str:
         return f"""\
@@ -146,43 +125,19 @@ runs at most {FORWARD_LINES} lines in one call, so always pass it `indices`."""
             "sees nothing. Every prediction is the same: one wide Gaussian "
             "centred on no movement, and three equally likely pen states. The "
             f"loss is about {ZERO_LOSS}.\n\n"
-            "Your weights will be the starting point for training this network "
-            "with gradient descent, in place of a random initialisation. They "
-            "are judged on `evaluate`.\n\n"
-            "Your task is to produce the best evaluation you can: write "
-            "weights that bring the loss on `evaluate` as low as you can. In "
-            "earlier runs, the best results tended to come from understanding "
-            "the structure of the data and building the network to match it. "
-            "The other metrics show where the loss comes from, and whether the "
-            "window follows the writing. What to build, in what order, and "
-            "where to spend your effort are yours to decide.\n\n"
-            "Use the training lines freely, as the rules say. But build what "
-            "is true of handwriting, not of those lines: how strokes are formed "
-            "and follow one another, how the pen lifts and moves on, how the "
-            "window moves over each character as it is written. Weights of "
-            "that kind hold on lines you have not seen, and `evaluate` is where "
-            "you check that they do. A gain on your samples that does not show "
-            "on `evaluate` is overfitting: take it out.\n\n"
-            "Write the weights so the network stays trainable. Where that and a "
-            "small gain in loss pull apart, trainability comes first:\n\n"
-            "- Avoid saturation where you can. A gate or unit pushed far into "
-            "the flat part of its sigmoid or tanh (pre-activations like ±20) "
-            "passes almost no gradient, so training will barely change it. "
-            "Prefer the smallest weights that still do the job.\n"
-            "- Do not leave units at exactly zero. A unit whose weights are all "
-            "zero outputs zero and receives zero gradient, so it can never "
-            "learn. This network has 1,200 units and you will probably give a "
-            "meaning to only some of them. Give every unit you do not use "
-            "small random incoming weights (for example normal with standard "
-            "deviation 0.05, and a forget-gate bias of 1), and keep the weights "
-            "that lead from those units into your own circuits and into the "
-            "outputs at zero or very small, so that their noise does not "
-            "disturb what you built.\n"
-            "- Training applies dropout of 0.1 to h1 and h2 on their way to "
-            "the layer above and to the output layer, so do not rest a circuit "
-            "on a single unit of those layers where a few would do.\n\n"
-            "Keep improving the weights until `evaluate` shows no further "
-            "improvement."
+            "The score is the loss on `evaluate`; lower is better. Its other "
+            "metrics show where the loss comes from and whether the window "
+            "follows the writing. What to build, in what order, and where to "
+            "spend your effort are yours to decide.\n\n"
+            "What is true of handwriting is how strokes are formed and follow "
+            "one another, how the pen lifts and moves on, and how the window "
+            "moves over each character as it is written. Build that.\n\n"
+            "For this network:\n\n"
+            "- It has 1,200 units, and you will probably give a meaning to only "
+            "some of them. For the ones you do not use, normal incoming weights "
+            "with standard deviation 0.05 and a forget-gate bias of 1 work well.\n"
+            "- Training applies dropout of 0.1 to h1 and h2 on their way to the "
+            "layer above and to the output layer."
         )
 
     def sandbox_variables(self) -> dict:
