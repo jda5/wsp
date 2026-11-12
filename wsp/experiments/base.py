@@ -18,16 +18,35 @@ from typing import Any
 
 import numpy as np
 
+from wsp import views
+
 Weights = dict[str, np.ndarray]
+Inputs = np.ndarray | dict[str, np.ndarray]
 
 
 @dataclass(frozen=True)
 class Split:
-    x: np.ndarray
+    """
+    Examples and their labels. `x` is one array or, for a model with several
+    inputs, a dict of arrays that each have one row per example.
+    """
+
+    x: Inputs
     y: np.ndarray
 
     def __len__(self) -> int:
         return len(self.y)
+
+    def take(self, rows: Any) -> "Split":
+        """
+        The examples at `rows`, as a smaller Split.
+        """
+        if isinstance(self.x, dict):
+            x = {name: array[rows] for name, array in self.x.items()}
+        else:
+            x = self.x[rows]
+
+        return Split(x, self.y[rows])
 
 
 class Experiment(ABC):
@@ -98,13 +117,13 @@ class Experiment(ABC):
         """
 
     @abstractmethod
-    def predict(self, x: np.ndarray) -> np.ndarray:
+    def predict(self, x: Inputs) -> np.ndarray:
         """
         The model's outputs for a batch of inputs.
         """
 
     @abstractmethod
-    def activations(self, x: np.ndarray) -> dict[str, np.ndarray]:
+    def activations(self, x: Inputs) -> dict[str, np.ndarray]:
         """
         Every layer's output for a batch of inputs, keyed by layer name.
         """
@@ -116,3 +135,24 @@ class Experiment(ABC):
         Run the model, as it is now, on `split` and score it.
         """
         return self.metrics(self.predict(split.x), split.y)
+
+    def forward_summary(
+        self, positions: list[int], examples: Split, activations: dict[str, np.ndarray]
+    ) -> str:
+        """
+        What the `forward` tool prints after running `examples`, the samples
+        at `positions`. By default, the output layer: as a table when there is
+        one row of outputs per sample, otherwise only its shape.
+        """
+        name = list(activations)[-1]
+        outputs = activations[name]
+
+        if outputs.ndim != 2:
+            return f"Ran {len(positions)} of your samples; output layer '{name}' has shape {outputs.shape}."
+
+        table = views.render_table(
+            outputs,
+            row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, examples.y)],
+            col_labels=list(range(outputs.shape[1])),
+        )
+        return f"Output layer '{name}' for {len(positions)} of your samples:\n\n{table}"

@@ -18,11 +18,7 @@ class KerasExperiment(Experiment):
         self.model = model
         self.batch_size = batch_size
 
-        self._variables = {
-            f"{layer.name}.{variable.name}": variable
-            for layer in model.layers
-            for variable in layer.trainable_weights
-        }
+        self._variables = self.name_variables()
 
         self._layers_model = keras.Model(
             inputs=model.inputs,
@@ -30,6 +26,27 @@ class KerasExperiment(Experiment):
         )
 
     # -------------------------------------------------------------------------------- model
+
+    def name_variables(self) -> dict[str, keras.Variable]:
+        """
+        Every trainable variable, keyed "layer.variable", e.g. "dense.kernel".
+
+        A layer built from several layers of its own can hold two variables
+        of the same name. Override this to name such a model's variables.
+        """
+        variables = [
+            (f"{layer.name}.{variable.name}", variable)
+            for layer in self.model.layers
+            for variable in layer.trainable_weights
+        ]
+        named = dict(variables)
+
+        if len(named) < len(variables):
+            raise ValueError(
+                "Two variables share a name. Override name_variables() to tell them apart."
+            )
+
+        return named
 
     def get_weights(self) -> Weights:
         return {

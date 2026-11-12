@@ -138,33 +138,18 @@ def forward_tool() -> Tool:
         weights = session.current_weights()
         budget.spend()
 
-        split = session.experiment.train()
-        rows = [drawn[i] for i in positions]
+        examples = session.experiment.train().take([drawn[i] for i in positions])
 
         session.experiment.set_weights(weights)
-        activations = session.experiment.activations(split.x[rows])
-        labels = split.y[rows]
+        activations = session.experiment.activations(examples.x)
 
         session.sandbox.put(
             "forward_result",
-            {"indices": np.array(positions), "labels": labels, "activations": activations},
+            {"indices": np.array(positions), "labels": examples.y, "activations": activations},
         )
         session.log.event("forward", indices=positions)
 
-        output_layer = list(activations)[-1]
-        outputs = activations[output_layer]
-
-        # One output row per sample fits in a table. Outputs at every step of
-        # a sequence do not, so they are only described.
-        if outputs.ndim == 2:
-            table = views.render_table(
-                outputs,
-                row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, labels)],
-                col_labels=list(range(outputs.shape[1])),
-            )
-            summary = f"Output layer '{output_layer}' for {len(positions)} of your samples:\n\n{table}"
-        else:
-            summary = f"Ran {len(positions)} of your samples; output layer '{output_layer}' has shape {outputs.shape}."
+        summary = session.experiment.forward_summary(positions, examples, activations)
 
         shapes = ", ".join(f"{name} {array.shape}" for name, array in activations.items())
         return (
@@ -217,10 +202,10 @@ def samples_tool(limit: int = 12) -> Tool:
         new = order[budget.used - count : budget.used]
         drawn = order[: budget.used]  # every sample so far, oldest first
 
+        examples = split.take(drawn)
+
         session.sample_indices = drawn.tolist()
-        session.sandbox.put(
-            "samples", {"indices": drawn, "x": split.x[drawn], "y": split.y[drawn]}
-        )
+        session.sandbox.put("samples", {"indices": drawn, "x": examples.x, "y": examples.y})
         session.log.event("samples", indices=new)
 
         # List the labels only when there is one per example, not one per step.
@@ -230,7 +215,7 @@ def samples_tool(limit: int = 12) -> Tool:
         return (
             f"Drew {count} new training examples{with_labels}.\n\n"
             f"All {len(drawn)} drawn so far are in the sandbox variable `samples` "
-            f"(keys: indices, x, y); x has shape {split.x[drawn].shape}.\n\n"
+            f"(keys: indices, x, y); {_describe_inputs(examples.x)}.\n\n"
             f"Samples: {budget}."
         )
 
@@ -256,6 +241,17 @@ def samples_tool(limit: int = 12) -> Tool:
         handler=handler,
         limit=limit,
     )
+
+
+def _describe_inputs(x: np.ndarray | dict[str, np.ndarray]) -> str:
+    """
+    e.g. "x has shape (12, 784)", or one shape per input when x is a dict.
+    """
+    if isinstance(x, dict):
+        shapes = ", ".join(f"{name} {array.shape}" for name, array in x.items())
+        return f"x is a dict of the model's inputs: {shapes}"
+
+    return f"x has shape {x.shape}"
 
 
 # -------------------------------------------------------------------------------- commit and reset
