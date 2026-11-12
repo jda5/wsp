@@ -1,7 +1,7 @@
 """
 Ask your agent, or yourself, to write starting weights for the handwriting
 synthesis network under production rules: the agent may fit to the training
-lines, and is pointed at what training finds hard, reading the text.
+lines, and its weights are judged on `evaluate`.
 
     uv run python -m examples.handwriting_production
     uv run python -m examples.handwriting_production --data ~/handwriting-data
