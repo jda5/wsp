@@ -16,7 +16,7 @@ from test_handwriting import CONFIG, make_line
 
 from wsp.experiments.handwriting_production import (
     FORWARD_LINES,
-    RULES,
+    PROMPT,
     HandwritingProductionExperiment,
     writing_progress,
 )
@@ -95,7 +95,7 @@ def test_writing_progress_takes_a_batch_of_lines():
 def test_the_production_rules_open_the_system_prompt(experiment):
     system = system_prompt(experiment, RunConfig())
 
-    assert system.startswith(RULES)
+    assert system.startswith(PROMPT)
     assert PROMPT not in system
 
 
