@@ -37,7 +37,7 @@ class Split:
     def __len__(self) -> int:
         return len(self.y)
 
-    def take(self, rows: Any) -> "Split":
+    def take(self, rows: Any) -> Split:
         """
         The examples at `rows`, as a smaller Split.
         """
@@ -159,7 +159,9 @@ class Experiment(ABC):
 
         table = views.render_table(
             outputs,
-            row_labels=[f"sample {i} (label {label})" for i, label in zip(positions, examples.y)],
+            row_labels=[
+                f"sample {i} (label {label})" for i, label in zip(positions, examples.y)
+            ],
             col_labels=list(range(outputs.shape[1])),
         )
         return f"Output layer '{name}' for {len(positions)} of your samples:\n\n{table}"
