@@ -108,8 +108,7 @@ standard library all work. There is no network, and no machine learning
 libraries are installed. Files you save in /workspace are kept for the rest
 of the run.
 
-Being able to write a loop does not change the rules: weights still must not
-be trained or fitted.
+Being able to write a loop does not change the rules above.
 
 Variables you create are kept between calls, so you can build an array in
 one call and assign it in the next."""
