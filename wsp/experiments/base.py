@@ -88,8 +88,7 @@ class Experiment(ABC):
     @abstractmethod
     def train(self) -> Split:
         """
-        The data a model would normally be trained on. The agent may look at
-        a few examples from it (the `samples` tool), never all of it.
+        The data a model would normally be trained on.
         """
 
     @abstractmethod
