@@ -66,10 +66,9 @@ Its budget is limited.
 
 ### 3. Leave the training to the training
 
-Do not train the network with gradient descent in the sandbox, whole or layer
-by layer. That happens next, on a GPU, far faster than numpy can do it here.
-Fitting the constants of a structure you designed, as rule 1 allows, is not
-training.
+Do not optimise the network's weights with any iterative method (gradient
+descent, Adam, evolutionary or coordinate search), whole or layer by layer.
+That happens next, on a GPU, far faster than numpy can do it here.
 
 ### 4. Use only what you are given
 
