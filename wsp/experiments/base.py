@@ -4,7 +4,7 @@ and what "good" means. The rest of the harness talks only to this class.
 
 Subclasses fill in three groups of methods:
 
-    what the agent is told    description, prompt (and optionally sandbox_variables)
+    what the agent is told    description, prompt (and optionally rules, sandbox_variables)
     the data                  train, validation, test, metrics
     the model                 get_weights, set_weights, predict, activations
 
@@ -66,6 +66,14 @@ class Experiment(ABC):
         """
         The first message to the agent: what to do from this starting point.
         """
+
+    def rules(self) -> str | None:
+        """
+        The rules the agent works under, which open the system prompt. None
+        means the standard rules (PROMPT in wsp/run.py): no training, no
+        fitting, and `evaluate` as the only measure.
+        """
+        return None
 
     def sandbox_variables(self) -> dict[str, Any]:
         """
