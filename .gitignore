@@ -222,12 +222,9 @@ __marimo__/
 # Experiment outputs
 outputs/
 runs/
-evals/fashion_mnist/layer_1_dense_weights.json
-evals/fashion_mnist/layer_2_dense_1_weights.json
-evals/fashion_mnist/layer_3_dense_2_weights.json
-evals/fashion_mnist/trained_fashion_mnist_model.keras
 
-# Notes
+# Notes and data
+data/
 notes/
 
 # MacOS nonsense
