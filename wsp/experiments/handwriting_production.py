@@ -33,15 +33,19 @@ from .handwriting import ZERO_LOSS, HandwritingExperiment
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 
+# Every signal of one line takes about 15 MB, and the agent may draw hundreds
+# of lines, so `forward` runs only a few at a time.
+FORWARD_LINES = 8
+
 RULES = """\
 You are a weight-space programmer. You write a neural network's weights
 directly with numpy code. Your weights will be the starting point for training
-the network with gradient descent, and the trained model is what matters.
+the network with gradient descent.
 
 ## The rules
 
-This is a production run. Nothing is judged on how the weights were made, only
-on how well they serve the training that follows. So there are few rules.
+This is a production run. Your weights are judged on `evaluate`, and nothing is
+judged on how you made them. So there are few rules.
 
 ### 1. The training data is yours to use
 
@@ -62,9 +66,10 @@ Its budget is limited.
 
 ### 3. Leave the training to the training
 
-Do not train the whole network with gradient descent in the sandbox. That
-happens next, on a GPU, far faster than numpy can do it here. Your time is
-better spent on what makes that training start well.
+Do not train the network with gradient descent in the sandbox, whole or layer
+by layer. That happens next, on a GPU, far faster than numpy can do it here.
+Fitting the constants of a structure you designed, as rule 1 allows, is not
+training.
 
 ### 4. Use only what you are given
 
@@ -132,7 +137,8 @@ window = trace["phi"] @ np.arange(len(ids))
 pen = writing_progress(samples["y"][line][:steps], mean, std) * (len(ids) - 1)
 ```
 
-The `forward` tool also prints the window_error of each line it runs."""
+The `forward` tool also prints the window_error of each line it runs. Here it
+runs at most {FORWARD_LINES} lines in one call, so always pass it `indices`."""
 
     def prompt(self) -> str:
         return (
@@ -142,8 +148,8 @@ The `forward` tool also prints the window_error of each line it runs."""
             "centred on no movement, and three equally likely pen states. The "
             f"loss is about {ZERO_LOSS}.\n\n"
             "Your weights will be the starting point for training this network "
-            "with gradient descent, in place of a random initialisation. What "
-            "matters is the model that training ends with.\n\n"
+            "with gradient descent, in place of a random initialisation. They "
+            "are judged on `evaluate`.\n\n"
             "Your task is to produce the best evaluation you can: write "
             "weights that bring the loss on `evaluate` as low as you can. In "
             "earlier runs, the best results tended to come from understanding "
@@ -158,7 +164,8 @@ The `forward` tool also prints the window_error of each line it runs."""
             "that kind hold on lines you have not seen, and `evaluate` is where "
             "you check that they do. A gain on your samples that does not show "
             "on `evaluate` is overfitting: take it out.\n\n"
-            "Write the weights so the network stays trainable:\n\n"
+            "Write the weights so the network stays trainable. Where that and a "
+            "small gain in loss pull apart, trainability comes first:\n\n"
             "- Avoid saturation where you can. A gate or unit pushed far into "
             "the flat part of its sigmoid or tanh (pre-activations like ±20) "
             "passes almost no gradient, so training will barely change it. "
@@ -218,6 +225,17 @@ The `forward` tool also prints the window_error of each line it runs."""
         scores = super().metrics(outputs, labels)
         scores["window_error"] = float(outputs["window_error"].mean())
         return scores
+
+    # -------------------------------------------------------------------------------- the model
+
+    def activations(self, x: dict) -> dict[str, np.ndarray]:
+        if len(x["text"]) > FORWARD_LINES:
+            raise ValueError(
+                f"`forward` runs at most {FORWARD_LINES} lines in one call here, "
+                f"not {len(x['text'])}: pass it `indices`."
+            )
+
+        return super().activations(x)
 
     # -------------------------------------------------------------------------------- private
 
