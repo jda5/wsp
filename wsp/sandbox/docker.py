@@ -74,7 +74,11 @@ class DockerSandbox:
         self.name = name
         self.timeout = timeout
         self.grace = grace
-        self.limits = ["--memory", memory, "--cpus", str(cpus)]
+        self.limits = [
+            "--memory", memory,
+            "--cpus", str(cpus),
+            "--env", f"OPENBLAS_NUM_THREADS={max(1, int(cpus))}",
+        ]  # fmt: skip
         self.image = ensure_image()
 
         self._starts = 0

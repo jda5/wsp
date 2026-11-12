@@ -1,0 +1,14 @@
+# Build-context filter for wsp/sandbox/Dockerfile.
+
+# Allowlist, not denylist: exclude everything, then re-include only the Python
+# source of the wsp package. This matches what the image hash in docker.py
+# covers (*.py under wsp/), so a new kind of file can never slip in unnoticed.
+# Weights (*.h5, *.keras, *.npz), datasets (strokes_data/), runs/, outputs/,
+# notebooks, .env, .venv and .git all stay out.
+*
+!wsp/**/*.py
+
+# Re-exclude things that can sit beside the source.
+**/__pycache__
+**/.ipynb_checkpoints
+wsp/notebooks
