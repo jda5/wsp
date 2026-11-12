@@ -15,6 +15,7 @@ import pytest
 from test_handwriting import CONFIG, make_line
 
 from wsp.experiments.handwriting_production import (
+    FORWARD_LINES,
     RULES,
     HandwritingProductionExperiment,
     writing_progress,
@@ -117,3 +118,10 @@ def test_the_sandbox_gets_the_normalisation(experiment):
     variables = experiment.sandbox_variables()
 
     assert {"vocab", "initial_step", "mean", "std"} <= variables.keys()
+
+
+def test_forward_refuses_more_lines_than_fit_in_memory(experiment):
+    lines = experiment.train().take(range(FORWARD_LINES + 1))
+
+    with pytest.raises(ValueError, match="at most"):
+        experiment.activations(lines.x)
