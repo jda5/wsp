@@ -178,7 +178,7 @@ def system_prompt(experiment: Experiment, config: RunConfig) -> str:
     weights = experiment.get_weights()
 
     sections = [
-        PROMPT,
+        experiment.rules() or PROMPT,
         experiment.description(),
         f"## Weights at the start\n\n{views.summarize_weights(weights)}",
         weights_guide(weights, config.max_output_chars),
