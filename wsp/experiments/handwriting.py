@@ -111,8 +111,8 @@ below.
 
 ## Data
 
-Lines of handwriting recorded from a pen (IAM-OnDB and DeepWriting), each with
-the text it says. A line is a sequence of pen points, and each point is a row
+Lines of handwriting recorded from a pen (IAM-OnDB and DeepWriting, plus some synthetic data), 
+each with the text it says. A line is a sequence of pen points, and each point is a row
 of 5 numbers:
 
     dx, dy      how far the pen moved since the previous point. x grows to
