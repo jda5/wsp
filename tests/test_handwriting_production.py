@@ -21,6 +21,7 @@ from wsp.experiments.handwriting_production import (
     writing_progress,
 )
 from wsp.run import PROMPT, RunConfig, system_prompt
+from wsp.tools.standard_tools import standard_tools
 
 MEAN, STD = [0.0, 0.0], 1.0  # a normalisation that changes nothing
 
@@ -97,6 +98,15 @@ def test_the_production_rules_open_the_system_prompt(experiment):
 
     assert system.startswith(PROMPT)
     assert PROMPT not in system
+
+
+def test_the_system_prompt_states_the_turn_and_tool_budgets(experiment):
+    config = RunConfig(tools=standard_tools(evaluations=40, samples=809), max_turns=200)
+    system = system_prompt(experiment, config)
+
+    assert "You have 200 turns" in system
+    assert "- `evaluate`: 40" in system
+    assert "- `samples`: 809" in system
 
 
 def test_evaluate_reports_how_far_the_window_is_from_the_pen(experiment):

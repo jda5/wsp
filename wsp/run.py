@@ -173,17 +173,36 @@ def run(
 
 def system_prompt(experiment: Experiment, config: RunConfig) -> str:
     """
-    The rules, the experiment, the weights as they start, and how to edit them.
+    The rules, the experiment, the budget, the weights as they start, and how to edit them.
     """
     weights = experiment.get_weights()
 
     sections = [
         experiment.rules() or PROMPT,
         experiment.description(),
+        budget(config),
         f"## Weights at the start\n\n{views.summarize_weights(weights)}",
         weights_guide(weights, config.max_output_chars),
     ]
     return "\n\n".join(section for section in sections if section)
+
+
+def budget(config: RunConfig) -> str:
+    """
+    How many turns the agent has, and how far each limited tool goes.
+    """
+    text = (
+        f"## Your budget\n\nYou have {config.max_turns} turns. A turn is one of your "
+        "replies, however many tools it calls. Plan your work to fit, and leave a few "
+        "turns to finish with your report."
+    )
+
+    limits = [f"- `{tool.name}`: {tool.limit:,}" for tool in config.tools if tool.limit is not None]
+    if limits:
+        text += "\n\nTools with a limit (`samples` counts examples, the rest count calls):\n"
+        text += "\n".join(limits)
+
+    return text
 
 
 # -------------------------------------------------------------------------------- private
