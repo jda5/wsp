@@ -96,6 +96,7 @@ class RunConfig:
     tools: list[Tool] = field(default_factory=standard_tools)
     max_turns: int = 50
     max_output_chars: int = 25_000  # about 3,000 weights per tool call
+    memory_gb: float = 4  # the sandbox's memory limit
     prompt: str | None = None  # overrides experiment.prompt()
 
 
@@ -120,7 +121,12 @@ def run(
     system = system_prompt(experiment, config)
     prompt = config.prompt or experiment.prompt()
 
-    sandbox = DockerSandbox(baseline, folder / "sandbox", name=f"wsp-{folder.name}")
+    sandbox = DockerSandbox(
+        baseline,
+        folder / "sandbox",
+        name=f"wsp-{folder.name}",
+        memory=f"{config.memory_gb:g}g",
+    )
     for name, value in experiment.sandbox_variables().items():
         sandbox.put(name, value)
 
@@ -182,7 +188,7 @@ def system_prompt(experiment: Experiment, config: RunConfig) -> str:
         experiment.description(),
         budget(config),
         f"## Weights at the start\n\n{views.summarize_weights(weights)}",
-        weights_guide(weights, config.max_output_chars),
+        weights_guide(weights, config.max_output_chars, config.memory_gb),
     ]
     return "\n\n".join(section for section in sections if section)
 
