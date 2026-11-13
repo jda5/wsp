@@ -209,6 +209,6 @@ def test_the_harness_refuses_to_read_a_symlink(sandbox, tmp_path):
 def test_every_example_in_the_guide_runs(sandbox):
     from wsp.sandbox.guide import examples, weights_guide
 
-    for line in examples(weights_guide(WEIGHTS, max_output_chars=25_000)):
+    for line in examples(weights_guide(WEIGHTS, max_output_chars=25_000, memory_gb=4)):
         result = output(sandbox, line)
         assert "Traceback" not in result, f"{line!r} failed:\n{result}"
