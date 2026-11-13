@@ -108,6 +108,7 @@ def test_the_system_prompt_states_the_turn_and_tool_budgets(experiment):
     assert "You have 200 turns" in system
     assert "- `evaluate`: 40" in system
     assert "- `samples`: 809" in system
+    assert "The sandbox has 4 GB of memory" in system
 
 
 def test_evaluate_reports_how_far_the_window_is_from_the_pen(experiment):
