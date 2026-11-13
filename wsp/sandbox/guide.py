@@ -12,7 +12,7 @@ import numpy as np
 Weights = dict[str, np.ndarray]
 
 
-def weights_guide(weights: Weights, max_output_chars: int) -> str:
+def weights_guide(weights: Weights, max_output_chars: int, memory_gb: float) -> str:
     """
     A step-by-step guide to viewing and editing ``weights``, written with
     their actual names and shapes.
@@ -107,6 +107,11 @@ This is full Python 3.14 with numpy: loops, functions, comprehensions and the
 standard library all work. There is no network, and no machine learning
 libraries are installed. Files you save in /workspace are kept for the rest
 of the run.
+
+The sandbox has {memory_gb:g} GB of memory. A cell that needs more stops the
+sandbox, which restarts from your last commit and loses every variable you
+created. So size large arrays before you make them, prefer float32, work in
+chunks, and save code and results you would need again in /workspace.
 
 Being able to write a loop does not change the rules above.
 
