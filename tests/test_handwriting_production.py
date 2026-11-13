@@ -20,7 +20,8 @@ from wsp.experiments.handwriting_production import (
     HandwritingProductionExperiment,
     writing_progress,
 )
-from wsp.run import PROMPT, RunConfig, system_prompt
+from wsp.run import PROMPT as STANDARD_RULES
+from wsp.run import RunConfig, system_prompt
 from wsp.tools.standard_tools import standard_tools
 
 MEAN, STD = [0.0, 0.0], 1.0  # a normalisation that changes nothing
@@ -97,7 +98,7 @@ def test_the_production_rules_open_the_system_prompt(experiment):
     system = system_prompt(experiment, RunConfig())
 
     assert system.startswith(PROMPT)
-    assert PROMPT not in system
+    assert STANDARD_RULES not in system
 
 
 def test_the_system_prompt_states_the_turn_and_tool_budgets(experiment):
