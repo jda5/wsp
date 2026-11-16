@@ -16,23 +16,25 @@ This is the first of a two-part series on WSP. Part two coming soon...
 
 ## The Harness 
 
-The first thing I did was build an agent harness that enables an LLM to natively read and write neural network weights. The code for which be found here: https://github.com/jda5/wsp. The harness broadly implements the following:
+The first thing I did was build a harness that lets an LLM read and write neural network weights directly. The code is on [GitHub](https://github.com/jda5/wsp). Here’s how it works:
 
-1. An agent is given access to a Python interpreter running inside a Docker container. The container has no internet access and only has Python 3.13 with Numpy installed. This was done to prevent cheating, such as peeking at the validation or test sets, using machine learning packages such as TensorFlow or Pytorch to run iterative training algorithms* or going on the internet to look up the answer.
-2. For each experiment the agent is given part (or sometimes all) of the training data, the network and a description of the task.
-3. The agent was given a `commit` and `reset` tool, which allowed it save a snapshot of the weigths as a kind of checkpoint that it can revert back to, so that it can explore different ideas.
-4. The agent also was given an `evaluate` tool. This runs network with the current weights on the validation data and returns evaluation metrics relavant to the task, e.g. accuracy, loss, confusion matricies, etc.
-5. The agent had a limited budget. It had to complete it's task in a certian number of turns (usually between 50 - 200 depending on the task), and it could only call the `evaluate` tool a limited number of times.
-6. Everything is logged. Agent thinking, tool use, python exectutions, etc.
-7. I also initially gave the agent access to a budgeted `forward` tool, which runs the model with the current weights on some training examples. This prints the output layer and stors the layer's activations in the sandbox, to see how weights responded to real inputs. The agent didn't use this as much as hoped, opting instead to create it's own version of the `forward` tool.
+1. An agent is given access to a Python interpreter running inside a Docker container. The container has no internet access and only has Python and Numpy installed. This was done to prevent obvious ways of cheating, such as peeking at the validation or test sets, training the model with a library like TensorFlow or PyTorch*, or looking up the answer online.
+2. For each experiment, the agent gets a description of the task, a description of the network and the network’s weights as NumPy arrays it can edit however it likes.
+3. The agent can draw a limited number of training examples (usually a dozen or so) with a `samples` tool, so it can see what the data looks like.
+4. A `commit` tool saves a snapshot of the weights, and a `reset` tool goes back to the last one. This lets the agent explore ideas without losing its best version.
+5. An `evaluate` tool runs the network on the validation set and returns the scores relevant for the task, such as accuracy, loss or a confusion matrix. The test set stays hidden, and is only scored at the very start and the very end of a run.
+6. Each run is limited to a set number of turns (50 to 100, depending on the task), and `evaluate` can only be called a limited number of times. This stops the agent from simply trying values until the score goes up.
+7. Everything is logged. Agent’s thinking, every tool call and every piece of Python it ran.
 
-The model was prompted to maximise the evaluation score by writing the network's weights with numpy code. I gave it certain rules that it should follow, things like: not to use gradient decent, not to build it's own dataset, not to exploit the dataset, etc. I also had another LLM check over the logs of each run for evidence of rule-breaking, and no run that broke the rules I'd set.
+I also gave the agent a `forward` tool, which runs the network on some examples, prints the output and stores the layer's activations in the container, so that the agent can observe how the weights respond to inputs. In practice the agent rarely used it, preferring to write its own version in NumPy.
 
-* The agent probably could have ran gradient descent with just Numpy and a `for` loop. In very early versions, loops were banned, but I felt that this was too restrictive, and agents were good at following the rules.
+The model was prompted to maximise the evaluation score by writing the network's weights in NumPy. I also gave it certain rules that it should follow, things like: not to use gradient decent, not to build it's own dataset, not to exploit the dataset, etc. I also had another LLM check over the logs of each run for evidence of rule-breaking, and no run broke the rules I'd set.
+
+* To be fair, the agent could have written gradient descent with NumPy and a `for` loop. Very early versions of the harness banned loops altogether, but that turned out to be too restrictive, and the agents were good at following the rules.
 
 ## Experiments
 
-For all expriments the models were written using TensorFlow and the harness used Claude Opus 5.5 with effort to "High". The harness can support any LLM, but I have free Anthropic API credits through their start-up program which is why I went with Claude.
+All of the models were built in [TensorFlow](https://www.tensorflow.org/). The LLM for all experiments was Claude Opus 5.5 with effort set to “High” - though for the Shakespeare experiment I also tried Claude Fable 5.2. The harness works with any LLM, but I get free Anthropic API credits through their start-up program which is why I went with Claude.
 
 ### Experiment 1: MNIST
 
