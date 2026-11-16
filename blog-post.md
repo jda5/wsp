@@ -1,18 +1,18 @@
 # Experiments in Weight-Space Programming
 
-Two weeks ago, MIT CSAIL published [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/). In the post, the researchers showed that frontier LLMs are surprisingly good at natively reading and writing neural network weights. They ran a few experiments, and showed that that GPT-6 Astra was capable of:
+Two weeks ago, MIT CSAIL published [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/). In the post, the researchers showed that frontier LLMs are surprisingly good at reading and writing neural network weights directly. Across a handful of experiments, they showed that GPT-6 Astra was able to:
 
-- identifying a network's task just by looking at the raw weights;
-- generating weights for a policy network from scratch, capable of playing simple games;
-- and improving Qwen3.5-0.8B's mathematical reasoning capabilities by directly editing its weigths.
+- identify what task a network was built for, just by looking at its raw weights;
+- write the weights of a game-playing policy network from scratch;
+- improve Qwen3.5-0.8B’s mathematical reasoning by editing its weights directly.
 
-All without using gradient descent or training loops! They coined this *Weight-Space Programming* (WSP).
+All without gradient descent or a training loop! They coined this **Weight-Space Programming** (WSP).
 
-These results briefly took the internet by storm as neural network are considered to be a black box. They process data across a huge vector space - billions of floating point numbers connected to each other across layers artificial neurons - making them entirely incomprehensible, even to to the developer who created them. We have no idea how AI systems make their decision. Yet, if an LLM was able to reason through the tensor soup, then we might just be able to lift the lid on the black box. 
+These results briefly took the internet by storm, as neural network are considered to be a black box. They process data across a huge vector space - billions of floating point numbers connected to each other across layers artificial neurons - making them entirely incomprehensible, even to to the developer who created them. We have very little idea how AI systems reach their decisions. Yet, if an LLM was able to reason through the tensor soup, we might be able to finally lift the lid on the black box. 
 
-I had to try WSP for myself. My goal was to run a series of experiments on a handful of classic machine learning problems to determine how well frontier LLMs can optimise or build models, soley by editing the model weights.
+I had to try WSP for myself. My goal was to run a series of experiments on a handful of classic machine learning problems to see how well a frontier LLM can build or improve a model, solely by editing its weights.
 
-This is part one of a two part series on WSP. This first part is a bit more exploratory than the second, whereas the second is a bit more formal.
+This is the first of a two-part series on WSP. Part two coming soon...
 
 ## The Harness 
 
@@ -20,7 +20,7 @@ The first thing I did was build an agent harness that enables an LLM to natively
 
 1. An agent is given access to a Python interpreter running inside a Docker container. The container has no internet access and only has Python 3.13 with Numpy installed. This was done to prevent cheating, such as peeking at the validation or test sets, using machine learning packages such as TensorFlow or Pytorch to run iterative training algorithms* or going on the internet to look up the answer.
 2. For each experiment the agent is given part (or sometimes all) of the training data, the network and a description of the task.
-3. The agent was given a `commit` and `revert` tool, which allowed it save a snapshot of the weigths as a kind of checkpoint that it can revert back to, so that it can explore different ideas.
+3. The agent was given a `commit` and `reset` tool, which allowed it save a snapshot of the weigths as a kind of checkpoint that it can revert back to, so that it can explore different ideas.
 4. The agent also was given an `evaluate` tool. This runs network with the current weights on the validation data and returns evaluation metrics relavant to the task, e.g. accuracy, loss, confusion matricies, etc.
 5. The agent had a limited budget. It had to complete it's task in a certian number of turns (usually between 50 - 200 depending on the task), and it could only call the `evaluate` tool a limited number of times.
 6. Everything is logged. Agent thinking, tool use, python exectutions, etc.
@@ -28,19 +28,19 @@ The first thing I did was build an agent harness that enables an LLM to natively
 
 The model was prompted to maximise the evaluation score by writing the network's weights with numpy code. I gave it certain rules that it should follow, things like: not to use gradient decent, not to build it's own dataset, not to exploit the dataset, etc. I also had another LLM check over the logs of each run for evidence of rule-breaking, and no run that broke the rules I'd set.
 
-I used Claude Opus 5.5 and Claude Fable 5.2 for all runs. The harness could support any LLM, but I have free Anthropic API credits through their start-up program which is why I went with Claude.
-
 * The agent probably could have ran gradient descent with just Numpy and a `for` loop. In very early versions, loops were banned, but I felt that this was too restrictive, and agents were good at following the rules.
 
 ## Experiments
 
+For all expriments the models were written using TensorFlow and the harness used Claude Opus 5.5 with effort to "High". The harness can support any LLM, but I have free Anthropic API credits through their start-up program which is why I went with Claude.
+
 ### Experiment 1: MNIST
 
-The first experiment I tried was to see if an agent could generate the weights of a model trained on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). This is a dataset of handwritten digits commonly used for training various image processing systems, and is sometimes regarded as the "Hello world" of machine learning engineering, so I thought it might be a good place to start.
+The first experiment I tried was to see if an agent could generate the weights of a model trained on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). MNIST is a dataset of 28×28 pixel images of handwritten digits. It’s sometimes regarded as the “Hello world” of machine learning, so I thought it would be a good place to start.
 
-I built a simple sequential model using TensorFlow, comprising two dense layers: a hidden layer with 128 units and an output layer of 10 units. Despite how small this model is, the number of trainable parameters totals 101,770. All weights were set to 0, before running the agent.
+I built a simple sequential model comprising two dense layers: a hidden layer with 128 units and an output layer of 10 units. Despite how small this model is, the number of trainable parameters totals 101,770. All weights were set to 0, before running the agent.
 
-The base LLM used in this experiment was Claude Opus 5.5 with effort to "High". The agent ran for 8 minutes, used a template matching strategy, resulting of a test score of 64.1%. For reference, a model trained with gradient descent can hit a test score of >85% in under 20 seconds. A 2025 paper calculates a network’s weights analytically from a small set of 30 reference digits and reports 63% on the MNIST test set with no training (https://arxiv.org/pdf/2505.23876) - which is what the model achieved.
+The agent ran for 8 minutes, used a template matching strategy, resulting of a test score of 64.1%. For reference, a model trained with gradient descent can hit a test score of >85% in under 20 seconds. A 2025 paper calculates a network’s weights analytically from a small set of 30 reference digits and reports 63% on the MNIST test set with no training (https://arxiv.org/pdf/2505.23876) - which is what the model achieved.
 
 This was a decent result, though in all honesty, given the fanfare of the MIT paper I expected better. MNIST is a well-known and is extensively written about, so I expect the agent to at least match gradient descent. That being said, the interesting thing was how the agent interpreted the data and reasoned how certain weights should be set. Taken from the logs:
 
