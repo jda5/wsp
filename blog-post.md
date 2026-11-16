@@ -44,7 +44,7 @@ This was a decent result, though in all honesty, given the fanfare of the MIT pa
 
 > Pure template matching probably tops out around 70%, so I'm weighing whether more variants per digit, drawing on more of the 128 units, could get past that.
 
-### Experiment 2: CartPole
+## Experiment 2: CartPole
 
 For the second experiment I wanted to try a different architectures and applications of AI. I thought of the reinforcement learning tasks that the reserachers at MIT gave GPT-6 Astra, and decided to tackle [CartPole](https://gymnasium.farama.org/environments/classic_control/cart_pole/). CartPole is another classic benchmark in which an agent must keep a pole balanced upright on a cart by pushing the cart left or right along a frictionless track, earning a reward for every timestep the pole stays within a set angle.
 
@@ -58,9 +58,9 @@ This is the text book answer. In truth you don't need deep learning to solve thi
 
 *** Expand on this - add a quote.
 
-### Experiment 3: IMDB
+## Experiment 3: IMDB
 
-I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classic classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
+I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
 
 I wrote a bag-of-words model, so that each review is turned into 10,000 inputs, one for each word in the vocabulary, which feed a single sigmoid output. 
 The agent began by reading through the vocabulary, then created a tiered sentiment dictionary - words like “worst” and “waste” got a negative score, words like “excellent” and “masterpiece” a positive score, etc.
@@ -69,21 +69,29 @@ The agent began by reading through the vocabulary, then created a tiered sentime
 
 The agent scored 86.2% on the test set. That’s 0.8 points below the same model trained using gradient decent (87.0%), and above Géron’s GRU (about 85%). It took under 3 minutes and changed 663 of the 10,001 weights. The agent also noted that a bag-of-words model can’t see negation (“not good”) or mixed reviews, so it had hit the model’s ceiling rather than its own. It’s worth noting that about a point of that score came from the agent’s memory of how IMDB reviewers write, with small weights on words like “zombie”, “budget” and “remake”, which is exactly the kind of intuition that makes WSP interesting, because encoding this information into a model.
 
-### Experiment 4: Two Spirals
+## Experiment 4: Two Spirals
 
-[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is classic. This data set is a noisy spiral, which is difficult for gradient descent optimization.
+[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is another classic. Two spirals wind around each other, with a bit of noise added to every point. The network has to classify which spiral a point belongs, which actually can be quite tricky for gradient decscent optimisation.
 
-This is the first experiment where the agent had to invent something rather than recall it. It's fascinating to see how the agent is able to make predictions based on it's own understanding of the problem, understand the data and then write a working network for it.
+I wrote a small network made up of two inputs (x and y), two hidden layers of 64 ReLU units and a single output, totalling 4,417 weights, all set to zero. Though, this time I didn’t tell the agent what the data was. It was only told that there were points in a plane, each labelled 0 or 1, and that finding the pattern was part of the task. It drew 100 sample points, recognised the shape straight away, and correctly estimated how tightly the spiral winds.
 
-### Experiment 5: Brackets
+The agent took roughly 6 minutes in total to solve the task. It evaluated once, scored 99.7%, and stopped, saying further tweaks would risk overfitting. On the test set it scored 99.9%.
 
-My next experiment was an RNN. I built a task based on Skachkova et al.'s (2018) "Closing Brackets with Recurrent Neural Networks" paper. The agent reads a balanced string of four kinds of bracket (()[]{}<>) with its last bracket removed and has to predict which closing bracket completes it. The trained version of this network described Skachkova et al. (2018) in scores 96.6% but fails on strings longer than about 8 brackets.
+Once again, the agent understood the data, spotted the pattern and designed a network around it. What stood out was how neatly the work was divided. The first layer drew a fan of lines spreading out from the centre. The second layer used those lines to mark the edges of the spirals, and the output layer then simply counted how many edges a point had crossed to decide which spiral it belonged to.
 
-The agent beats both the paper and our own training, especially on long strings (100% against 93.6%). It got there with a construction that’s arguably more robust than gradient descent’s. It found a flaw in a published benchmark. Spotting that the task is really a counting problem is the most interesting result of the day. It’s also worth noting for your research: the paper’s last-bracket task measures less than it appears to.
+> I’m setting up the first layer so each unit is a half-plane test along one ray’s normal, with biases at zero.
 
-We could make this harder, but I thought that we really need to up the ante here if we are to properly stretch the model. Since I work with LSTMs in production, let's see how it handles Shakespearean passages!
+## Experiment 5: Brackets
 
-### Experiment 6: Shakespeare
+Next up was a recurrent neural network. I based the task on [Skachkova et al.’s (2018) “Closing Brackets with Recurrent Neural Networks”](https://aclanthology.org/W18-5425/). The network reads a string of brackets - such as `([]{<>})` - with the last bracket removed, and has to predict which closing bracket comes next. The paper’s trained network scores 96.6%, but struggles with longer strings.
+
+The agent’s first attempt was to keep track of which bracket was opened first. However, while working through the problem it noticed a shortcut. Only the last bracket is missing, meaning that every kind of bracket is balanced except one. It reaslised that all it needed to do was count open minus closed brackets for each kind, and the answer would be "the one that equals 1".
+
+It built four simple counters, one for each kind of bracket, using 16 units each. In under a minute, with a single evaluation, it scored 100% on every string length.
+
+Much like the IMDB experiment, the agent managed to interpret the dataset and reason its way to the answer. I could make the task harder, but I thought I needed to up the ante, and since I work with LSTMs in production, I wanted to see how it handled Shakespearean passages...
+
+## Experiment 6: Shakespeare
 
 The architecture is a character-based LSTM; the same dataset and task that Geron and Karapathy use to showcase LSTMs. I first ran an experiment where the model weights were zeroed out, and the agent had to write the weights from scratch. It achieved around 35% accuracy by using clever language tricks (character frequencies, bigram frequencies, common word endings), and translating those to weights - which mind-mindboggling, though I observed similar strategems in the the IMDB task.
 
