@@ -48,7 +48,11 @@ This was a decent result, though in all honesty, given the fanfare of the MIT pa
 
 For the second experiment I wanted to try a different architectures and applications of AI. I thought of the reinforcement learning tasks that the reserachers at MIT gave GPT-6 Astra, and decided to tackle [CartPole](https://gymnasium.farama.org/environments/classic_control/cart_pole/). CartPole is another classic benchmark in which an agent must keep a pole balanced upright on a cart by pushing the cart left or right along a frictionless track, earning a reward for every timestep the pole stays within a set angle.
 
-I wrote a small policy model comprising one hidden layer of 16 units, and to cut a long story short the agent completely obliterated this task. It achieved a perfect score in just a few turns, using just a handful of weights. The agent thought for about 490 tokens, chose a lienar rule and decided on a weigthed sum of the for inputs. 
+I wrote a small policy model comprising one hidden layer of 16 units, and to cut a long story short the agent completely obliterated this task. It achieved a perfect score in just a few turns, using just a handful of weights. The agent thought for about 490 tokens, chose a lienar rule and decided on a weigthed sum of the for inputs.
+
+> I wrote a linear state-feedback controller with the bang-bang structure of LQR control into the network.
+
+> The small positive cart position and velocity terms bring the cart back toward the centre, since tilting the pole the right way first lets the cart drift back.
 
 This is the text book answer. In truth you don't need deep learning to solve this task, and it can be accomplished with very basic rules. The agent knows the solution and didn't have to work anything out, but it still was interesting to see how it was able reason throught the networks architecture and interpret this linear rule as weigths.
 
@@ -58,22 +62,16 @@ This is the text book answer. In truth you don't need deep learning to solve thi
 
 I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classic classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
 
-I wrote up a bag-of-words model, and ....[describe what the agent did]..... and the results went much the same way that CartPole did. The agent scored 86.2% on test. That’s 0.8 points below the same model trained normally (87.0%), and above Géron’s GRU (about 85%). It took under 3 minutes and changed 663 of the 10,001 weights.
+I wrote a bag-of-words model, so that each review is turned into 10,000 inputs, one for each word in the vocabulary, which feed a single sigmoid output. 
+The agent began by reading through the vocabulary, then created a tiered sentiment dictionary - words like “worst” and “waste” got a negative score, words like “excellent” and “masterpiece” a positive score, etc.
 
+> I’m also considering a small negative weight for words like ‘horror’, ‘zombie’, ‘gore’ and ‘budget’, since low-budget horror tends to get panned.
 
-
-
-
-
-
-
-
-
-
+The agent scored 86.2% on the test set. That’s 0.8 points below the same model trained using gradient decent (87.0%), and above Géron’s GRU (about 85%). It took under 3 minutes and changed 663 of the 10,001 weights. The agent also noted that a bag-of-words model can’t see negation (“not good”) or mixed reviews, so it had hit the model’s ceiling rather than its own. It’s worth noting that about a point of that score came from the agent’s memory of how IMDB reviewers write, with small weights on words like “zombie”, “budget” and “remake”, which is exactly the kind of intuition that makes WSP interesting, because encoding this information into a model.
 
 ### Experiment 4: Two Spirals
 
-[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is another classic. This data set is a noisy spiral, which is difficult for gradient descent optimization.
+[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is classic. This data set is a noisy spiral, which is difficult for gradient descent optimization.
 
 This is the first experiment where the agent had to invent something rather than recall it. It's fascinating to see how the agent is able to make predictions based on it's own understanding of the problem, understand the data and then write a working network for it.
 
