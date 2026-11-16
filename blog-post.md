@@ -32,7 +32,9 @@ I used Claude Opus 5.5 and Claude Fable 5.2 for all runs. The harness could supp
 
 * The agent probably could have ran gradient descent with just Numpy and a `for` loop. In very early versions, loops were banned, but I felt that this was too restrictive, and agents were good at following the rules.
 
-## Experiment 1: MNIST
+## Experiments
+
+### Experiment 1: MNIST
 
 The first experiment I tried was to see if an agent could generate the weights of a model trained on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). This is a dataset of handwritten digits commonly used for training various image processing systems, and is sometimes regarded as the "Hello world" of machine learning engineering, so I thought it might be a good place to start.
 
@@ -44,7 +46,7 @@ This was a decent result, though in all honesty, given the fanfare of the MIT pa
 
 > Pure template matching probably tops out around 70%, so I'm weighing whether more variants per digit, drawing on more of the 128 units, could get past that.
 
-## Experiment 2: CartPole
+### Experiment 2: CartPole
 
 For the second experiment I wanted to try a different architectures and applications of AI. I thought of the reinforcement learning tasks that the reserachers at MIT gave GPT-6 Astra, and decided to tackle [CartPole](https://gymnasium.farama.org/environments/classic_control/cart_pole/). CartPole is another classic benchmark in which an agent must keep a pole balanced upright on a cart by pushing the cart left or right along a frictionless track, earning a reward for every timestep the pole stays within a set angle.
 
@@ -58,7 +60,7 @@ This is the text book answer. In truth you don't need deep learning to solve thi
 
 *** Expand on this - add a quote.
 
-## Experiment 3: IMDB
+### Experiment 3: IMDB
 
 I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
 
@@ -69,7 +71,7 @@ The agent began by reading through the vocabulary, then created a tiered sentime
 
 The agent scored 86.2% on the test set. That’s 0.8 points below the same model trained using gradient decent (87.0%), and above Géron’s GRU (about 85%). It took under 3 minutes and changed 663 of the 10,001 weights. The agent also noted that a bag-of-words model can’t see negation (“not good”) or mixed reviews, so it had hit the model’s ceiling rather than its own. It’s worth noting that about a point of that score came from the agent’s memory of how IMDB reviewers write, with small weights on words like “zombie”, “budget” and “remake”, which is exactly the kind of intuition that makes WSP interesting, because encoding this information into a model.
 
-## Experiment 4: Two Spirals
+### Experiment 4: Two Spirals
 
 [Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is another classic. Two spirals wind around each other, with a bit of noise added to every point. The network has to classify which spiral a point belongs, which actually can be quite tricky for gradient decscent optimisation.
 
@@ -81,7 +83,7 @@ Once again, the agent understood the data, spotted the pattern and designed a ne
 
 > I’m setting up the first layer so each unit is a half-plane test along one ray’s normal, with biases at zero.
 
-## Experiment 5: Brackets
+### Experiment 5: Brackets
 
 Next up was a recurrent neural network. I based the task on [Skachkova et al.’s (2018) “Closing Brackets with Recurrent Neural Networks”](https://aclanthology.org/W18-5425/). The network reads a string of brackets - such as `([]{<>})` - with the last bracket removed, and has to predict which closing bracket comes next. The paper’s trained network scores 96.6%, but struggles with longer strings.
 
@@ -91,8 +93,18 @@ It built four simple counters, one for each kind of bracket, using 16 units each
 
 Much like the IMDB experiment, the agent managed to interpret the dataset and reason its way to the answer. I could make the task harder, but I thought I needed to up the ante, and since I work with LSTMs in production, I wanted to see how it handled Shakespearean passages...
 
-## Experiment 6: Shakespeare
+### Experiment 6: Shakespeare
 
-The architecture is a character-based LSTM; the same dataset and task that Geron and Karapathy use to showcase LSTMs. I first ran an experiment where the model weights were zeroed out, and the agent had to write the weights from scratch. It achieved around 35% accuracy by using clever language tricks (character frequencies, bigram frequencies, common word endings), and translating those to weights - which mind-mindboggling, though I observed similar strategems in the the IMDB task.
+My final experiment was to have an agent generate weights for a character-level LSTM that ingestes Shakespearean text and predicts the next character. It’s the same dataset and task that [Géron](https://github.com/ageron/handson-ml3/blob/main/16_nlp_with_rnns_and_attention.ipynb) and [Karpathy](https://karpathy.github.io/2015/05/21/rnn-effectiveness/) use to showcase LSTMs.
 
-One experiment I also wanted to try not yet tried, is whether the agent make improvements to a pre-trained model? For this next experiment I will train the same character-level LSTM architecture - using gradient decent - but curtail the number of epochs. Here is the setup:
+I first ran an experiment where the weights were zeroed out and the agent had to write them from scratch. It reached about 34% accuracy using clever language tricks (character frequencies, common letter pairs, common word endings) and translating them into weights.
+
+One thing I hadn’t tried yet was whether the agent could improve a model that had already been trained. So, I trained the same LSTM with gradient descent, but stopped it after just a few epochs. It scored 39.9% on the test set, which is considerably less than the 51.3% it would have reached had it been allowed to train further.
+
+The agent started by looking for something to fix, and found nothing:
+
+> Nothing points to a defect, so the model seems simply undertrained, and any gains will have to come from hand-coded knowledge.
+
+After 36 minutes, it nudged the test accuracy from 39.9% to 40.5%, which is roughly half an epoch of extra training. I then ran the same task with Fable 5.2. It came up with a far more sophisticated strategy, compressing a large chunk of the network by hand to make room for a tree of common word beginnings. Though this still ended up in almost exactly the same place.
+
+This was the first task the agent couldn’t crack, and I think it shows the limits of weight-space programming. What an undertrained model is missing isn’t a bug you can fix. It’s thousands of small patterns spread across all of its weights. As the agent put it, “knowledge of whole words is the main gap, spread across many of them.” Each hand-written rule was worth a tiny fraction of a percent, and there’s only room for a few dozen of them.
