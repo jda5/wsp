@@ -1,6 +1,6 @@
 # Experiments in Weight-Space Programming
 
-Two weeks ago, MIT CSAIL published [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/). In the post, the researchers showed that frontier LLMs are surprisingly good at reading and writing neural network weights directly. Across a handful of experiments, they showed that GPT-6 Astra was able to:
+Two weeks ago, MIT CSAIL published [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/). In the post, the researchers demonstrated that frontier LLMs are surprisingly good at reading and writing neural network weights directly. Across a handful of experiments, they showed that GPT-6 Astra was able to:
 
 - identify what task a network was built for, just by looking at its raw weights;
 - write the weights of a game-playing policy network from scratch;
@@ -8,7 +8,7 @@ Two weeks ago, MIT CSAIL published [Sparks of Weight-Space Programming](https://
 
 All without gradient descent or a training loop! They coined this **Weight-Space Programming** (WSP).
 
-These results briefly took the internet by storm, as neural network are considered to be a black box. They process data across a huge vector space - billions of floating point numbers connected to each other across layers artificial neurons - making them entirely incomprehensible, even to to the developer who created them. We have very little idea how AI systems reach their decisions. Yet, if an LLM was able to reason through the tensor soup, we might be able to finally lift the lid on the black box. 
+These results briefly took the internet by storm, as neural network are considered to be a black box. They process data across a huge vector space - billions of floating point numbers connected to each other across layers artificial neurons - making them entirely incomprehensible, even to to the developer who created them. We have very little idea how AI systems reach their decisions. Yet, if an LLM was able to reason through the tensor soup, we might be able to lift the lid on the black box. 
 
 I had to try WSP for myself. My goal was to run a series of experiments on a handful of classic machine learning problems to see how well a frontier LLM can build or improve a model, solely by editing its weights.
 
@@ -18,11 +18,11 @@ This is the first of a two-part series on WSP. Part two coming soon...
 
 The first thing I did was build a harness that lets an LLM read and write neural network weights directly. The code is on [GitHub](https://github.com/jda5/wsp). Here’s how it works:
 
-1. An agent is given access to a Python interpreter running inside a Docker container. The container has no internet access and only has Python and Numpy installed. This was done to prevent obvious ways of cheating, such as peeking at the validation or test sets, training the model with a library like TensorFlow or PyTorch*, or looking up the answer online.
-2. For each experiment, the agent gets a description of the task, a description of the network and the network’s weights as NumPy arrays it can edit however it likes.
+1. An agent is given access to a Python interpreter running inside a Docker container. The container has no internet access and only has Python and NumPy installed. This was done to prevent obvious ways of cheating, such as peeking at the validation or test sets, training the model with a library like TensorFlow or PyTorch*, or looking up the answer online.
+2. For each experiment, the agent gets a description of the task, a description of the network and the network’s weights as NumPy arrays that it can edit however it likes.
 3. The agent can draw a limited number of training examples (usually a dozen or so) with a `samples` tool, so it can see what the data looks like.
 4. A `commit` tool saves a snapshot of the weights, and a `reset` tool goes back to the last one. This lets the agent explore ideas without losing its best version.
-5. An `evaluate` tool runs the network on the validation set and returns the scores relevant for the task, such as accuracy, loss or a confusion matrix. The test set stays hidden, and is only scored at the very start and the very end of a run.
+5. An `evaluate` tool runs the network on the validation set and returns scores relevant for the task (such as accuracy, loss, a confusion matrix, etc.). The test set stays hidden, and is only scored at the very start and the very end of a run.
 6. Each run is limited to a set number of turns (50 to 100, depending on the task), and `evaluate` can only be called a limited number of times. This stops the agent from simply trying values until the score goes up.
 7. Everything is logged. Agent’s thinking, every tool call and every piece of Python it ran.
 
@@ -34,17 +34,23 @@ The model was prompted to maximise the evaluation score by writing the network's
 
 ## Experiments
 
-All of the models were built in [TensorFlow](https://www.tensorflow.org/). The LLM for all experiments was Claude Opus 5.5 with effort set to “High” - though for the Shakespeare experiment I also tried Claude Fable 5.2. The harness works with any LLM, but I get free Anthropic API credits through their start-up program which is why I went with Claude.
+All of the models were built in [TensorFlow](https://www.tensorflow.org/). The LLM for all experiments was [Claude Opus 5.5](https://www.anthropic.com/claude-opus-5-5) with effort set to “High” - though for the Shakespeare experiment I also tried [Claude Fable 5.2](https://www.anthropic.com/claude-fable-and-mythos-5-2). The harness works with any LLM, but I get free Anthropic API credits through their start-up program which is why I went with Claude.
 
 ### Experiment 1: MNIST
 
 The first experiment I tried was to see if an agent could generate the weights of a model trained on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). MNIST is a dataset of 28×28 pixel images of handwritten digits. It’s sometimes regarded as the “Hello world” of machine learning, so I thought it would be a good place to start.
 
-I built a simple sequential model comprising two dense layers: a hidden layer with 128 units and an output layer of 10 units. Despite how small this model is, the number of trainable parameters totals 101,770. All weights were set to 0, before running the agent.
+![Sample images from MNIST test dataset. Courtesy of Wikipedia.](https://upload.wikimedia.org/wikipedia/commons/b/b1/MNIST_dataset_example.png?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled-url)
 
-The agent ran for 8 minutes, used a template matching strategy, resulting of a test score of 64.1%. For reference, a model trained with gradient descent can hit a test score of >85% in under 20 seconds. A 2025 paper calculates a network’s weights analytically from a small set of 30 reference digits and reports 63% on the MNIST test set with no training (https://arxiv.org/pdf/2505.23876) - which is what the model achieved.
+I built a simple sequential model comprising two dense layers: a hidden layer with 128 units and an output layer of 10 units. The number of trainable parameters was 101,770, and all weights were set to 0 before running the agent.
 
-This was a decent result, though in all honesty, given the fanfare of the MIT paper I expected better. MNIST is a well-known and is extensively written about, so I expect the agent to at least match gradient descent. That being said, the interesting thing was how the agent interpreted the data and reasoned how certain weights should be set. Taken from the logs:
+The agent ran for 8 minutes, employing a template matching strategy to complete the task. It wrote drew each digit out of lines, arcs and ellipses. Then it made 12 versions of each by slanting it, stretching it and, for some digits, changing its shape - a 1 with and without the hook, a 7 with and without the cross-bar, etc.
+
+> The idea is to draw stroke-based digit templates from my own knowledge...
+
+The agent achieved a test score of 64.1%. For reference, a model trained with gradient descent can hit a test score of >85% in under 20 seconds. For reference, a [2025 paper](https://arxiv.org/pdf/2505.23876) calculated a network’s weights from 30 reference digits, with no training, and reported 63%. That’s almost exactly where the agent landed.
+
+This was a decent result, though in all honesty, given the fanfare of the MIT paper, I expected better. MNIST is so well known and so extensively written about that I expected the agent to at least match gradient descent. That being said, watching it draw digits in code, check them against real examples and redraw the ones that didn’t fit was fascinating. The agent also identified it was approaching a limit:
 
 > Pure template matching probably tops out around 70%, so I'm weighing whether more variants per digit, drawing on more of the 128 units, could get past that.
 
@@ -52,26 +58,27 @@ This was a decent result, though in all honesty, given the fanfare of the MIT pa
 
 For the second experiment I wanted to try a different architectures and applications of AI. I thought of the reinforcement learning tasks that the reserachers at MIT gave GPT-6 Astra, and decided to tackle [CartPole](https://gymnasium.farama.org/environments/classic_control/cart_pole/). CartPole is another classic benchmark in which an agent must keep a pole balanced upright on a cart by pushing the cart left or right along a frictionless track, earning a reward for every timestep the pole stays within a set angle.
 
-I wrote a small policy model comprising one hidden layer of 16 units, and to cut a long story short the agent completely obliterated this task. It achieved a perfect score in just a few turns, using just a handful of weights. The agent thought for about 490 tokens, chose a lienar rule and decided on a weigthed sum of the for inputs.
+![GIF of CartPole in action. Courtesy of Rokas Liuberskis](https://github.com/pythonlessons/CartPole_reinforcement_learning/raw/master/IMAGES/CartPole_test.gif)
+
+I wrote a small policy model comprising one hidden layer of 16 units, and to cut a long story short the agent completely obliterated this task. It achieved a perfect score in just a few turns, using just a handful of weights. The agent thought for about 490 tokens, chose a lienar rule and decided on a weigthed sum of the four inputs.
 
 > I wrote a linear state-feedback controller with the bang-bang structure of LQR control into the network.
 
-> The small positive cart position and velocity terms bring the cart back toward the centre, since tilting the pole the right way first lets the cart drift back.
-
-This is the text book answer. In truth you don't need deep learning to solve this task, and it can be accomplished with very basic rules. The agent knows the solution and didn't have to work anything out, but it still was interesting to see how it was able reason throught the networks architecture and interpret this linear rule as weigths.
-
-*** Expand on this - add a quote.
+This is the text book answer. In truth you don't need deep learning to solve this task, and it can be accomplished with very basic rules. The agent knows the solution and didn't have to work anything out, but it still was interesting to see how it was able reason throught the networks architecture and implement the linear rule as weigths. 
 
 ### Experiment 3: IMDB
 
-I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
+Next, I wanted to try something harder. I thought a natural language experiment might be interesting, and decided on the [IMDB sentinment analysis](https://keras.io/api/datasets/imdb/) benchmark. This is a classification task in which a model must read a movie review and predict whether the author had positive or negative feelings about the film. 
 
-I wrote a bag-of-words model, so that each review is turned into 10,000 inputs, one for each word in the vocabulary, which feed a single sigmoid output. 
-The agent began by reading through the vocabulary, then created a tiered sentiment dictionary - words like “worst” and “waste” got a negative score, words like “excellent” and “masterpiece” a positive score, etc.
+I wrote a bag-of-words model. Each review is turned into 10,000 inputs, one for each word in the vocabulary. These feed a single sigmoid output, so the model has one weight per word, plus a bias.
+
+The agent began by reading through the vocabulary, then created a tiered sentiment dictionary - words like “worst” and “waste” got a negative score, words like “excellent” and “masterpiece” a positive score, etc. It also drew on what it knew about how people write reviews:
 
 > I’m also considering a small negative weight for words like ‘horror’, ‘zombie’, ‘gore’ and ‘budget’, since low-budget horror tends to get panned.
 
-The agent scored 86.2% on the test set. That’s 0.8 points below the same model trained using gradient decent (87.0%), and above Géron’s GRU (about 85%). It took under 3 minutes and changed 663 of the 10,001 weights. The agent also noted that a bag-of-words model can’t see negation (“not good”) or mixed reviews, so it had hit the model’s ceiling rather than its own. It’s worth noting that about a point of that score came from the agent’s memory of how IMDB reviewers write, with small weights on words like “zombie”, “budget” and “remake”, which is exactly the kind of intuition that makes WSP interesting, because encoding this information into a model.
+The agent scored 86.2% on the test set, just 0.8 points below the same model trained with gradient descent (87.0%). It took under 3 minutes and changed 663 of the 10,001 weights. It also pointed out, that a bag-of-words model can’t see negation (“not good”) or mixed reviews, so it had hit the limits of the model rather than its own.
+
+The weights came from the agent’s sense of how IMDB reviewers write. I think this is exactly what makes WSP interesting. Gradient descent can learn the same pattern, but it ends up implicitly buried somewhere in the weights. Here, the agent reasons explicitly, and we can follow why each weight is there.
 
 ### Experiment 4: Two Spirals
 
