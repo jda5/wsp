@@ -1,16 +1,25 @@
 # Weight-Space Programming
 
-The Wikipedia defines [weight-space programming](https://en.wikipedia.org/wiki/Weight-space_programming) (WSP) as:
+A harness that lets an LLM read and write the weights of a neural network directly, with no gradient descent or training loop.
 
-> ...an approach in machine learning in which a general-purpose large language model (LLM) reads, interprets and directly writes the weights of another artificial neural network, without using gradient descent or a training loop.
+Inspired by [Takehi et al. (2026)](https://rikiyat.github.io/blog/weight-space-programming), I used it to see how well Claude can build or improve models on classic ML problems (MNIST, CartPole, IMDB, Two Spirals, Brackets and Shakespeare) solely by editing their weights.
 
-Drawing inspiration from [Takehi et al. (2026)](https://rikiyat.github.io/blog/weight-space-programming), this project has two aims:
+**Read the write-up: [Experiments in Weight-Space Programming](https://jacobstrauss.bearblog.dev/experiments-in-weight-space-programming/)**
 
-1. Create an agent harness that enables an LLMs to natively read and write neural network weights.
-2. Run experiments on a series of classic ML problems to determine how well frontier LLMs can optimise or build models, soley by editing the model weights.
+## How it works
 
-## Prerequisits
+The agent runs NumPy code inside a Docker sandbox with no internet access, and edits the weights directly. It can draw a few training examples, commit and reset snapshots, and score its weights on the validation set a limited number of times. The test set stays hidden until the end of the run, and everything is logged to `runs/`.
 
-- Python
-- [Docker](https://www.docker.com/) to sandbox the agent.
-- (Optionally) [uv](https://docs.astral.sh/uv/) for package management.
+## Running it
+
+You'll need Python 3.14, [Docker](https://www.docker.com/), [uv](https://docs.astral.sh/uv/) and an Anthropic API key in `.env` (`ANTHROPIC_API_KEY=...`).
+
+```bash
+uv run python -m examples.cartpole
+```
+
+Every experiment in `examples/` runs the same way. Use `--agent human` to write the weights yourself, and follow a run live from another terminal with:
+
+```bash
+uv run python -m wsp.watch --follow
+```
