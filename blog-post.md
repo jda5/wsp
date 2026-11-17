@@ -40,7 +40,7 @@ All of the models were built in [TensorFlow](https://www.tensorflow.org/). The L
 
 The first experiment I tried was to see if an agent could generate the weights of a model trained on the [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database). MNIST is a dataset of 28×28 pixel images of handwritten digits. It’s sometimes regarded as the “Hello world” of machine learning, so I thought it would be a good place to start.
 
-![Sample images from MNIST test dataset. Courtesy of Wikipedia.](https://upload.wikimedia.org/wikipedia/commons/b/b1/MNIST_dataset_example.png?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled-url)
+<img src="https://upload.wikimedia.org/wikipedia/commons/b/b1/MNIST_dataset_example.png?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled-url" alt="Sample images from MNIST test dataset. Courtesy of Wikipedia." height="300">
 
 I built a simple sequential model comprising two dense layers: a hidden layer with 128 units and an output layer of 10 units. The number of trainable parameters was 101,770, and all weights were set to 0 before running the agent.
 
@@ -58,7 +58,7 @@ This was a decent result, though in all honesty, given the fanfare of the MIT pa
 
 For the second experiment I wanted to try a different architectures and applications of AI. I thought of the reinforcement learning tasks that the reserachers at MIT gave GPT-6 Astra, and decided to tackle [CartPole](https://gymnasium.farama.org/environments/classic_control/cart_pole/). CartPole is another classic benchmark in which an agent must keep a pole balanced upright on a cart by pushing the cart left or right along a frictionless track, earning a reward for every timestep the pole stays within a set angle.
 
-![GIF of CartPole in action. Courtesy of Rokas Liuberskis](https://github.com/pythonlessons/CartPole_reinforcement_learning/raw/master/IMAGES/CartPole_test.gif)
+<img src="https://github.com/pythonlessons/CartPole_reinforcement_learning/raw/master/IMAGES/CartPole_test.gif" alt="GIF of CartPole in action. Courtesy of Rokas Liuberskis" width="300" height="300">
 
 I wrote a small policy model comprising one hidden layer of 16 units, and to cut a long story short the agent completely obliterated this task. It achieved a perfect score in just a few turns, using just a handful of weights. The agent thought for about 490 tokens, chose a lienar rule and decided on a weigthed sum of the four inputs.
 
@@ -82,9 +82,11 @@ The weights came from the agent’s sense of how IMDB reviewers write. I think t
 
 ### Experiment 4: Two Spirals
 
-[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is another classic. Two spirals wind around each other, with a bit of noise added to every point. The network has to classify which spiral a point belongs, which actually can be quite tricky for gradient decscent optimisation.
+[Two Spirals](https://developers.google.com/machine-learning/crash-course/DPE/tp-il-neural-net-intro-spiral) is another classic. Two spirals wind around each other, with a bit of noise added to every point. The network has to classify which spiral a point belongs, which can actually be quite tricky for gradient decscent optimisation.
 
-I wrote a small network made up of two inputs (x and y), two hidden layers of 64 ReLU units and a single output, totalling 4,417 weights, all set to zero. Though, this time I didn’t tell the agent what the data was. It was only told that there were points in a plane, each labelled 0 or 1, and that finding the pattern was part of the task. It drew 100 sample points, recognised the shape straight away, and correctly estimated how tightly the spiral winds.
+<img src="https://miro.medium.com/v2/resize:fit:640/format:webp/1*m2oF-ZzbXhVFq6ss9R4S_Q.png" alt="Depiction of the Two Spirals problem. Courtesy of Rakesh Malviya" width="300" height="300">
+
+I wrote a small network made up of two inputs (x and y), two hidden layers of 64 ReLU units and a single output, totalling 4,417 weights. This time I didn’t tell the agent what the data was. It was only told that there were points in a plane, each labelled 0 or 1, and that finding the pattern was part of the task. It drew 100 sample points, recognised the shape straight away, and correctly estimated how tightly the spiral winds.
 
 The agent took roughly 6 minutes in total to solve the task. It evaluated once, scored 99.7%, and stopped, saying further tweaks would risk overfitting. On the test set it scored 99.9%.
 
@@ -116,4 +118,14 @@ The agent started by looking for something to fix, and found nothing:
 
 After 36 minutes, it nudged the test accuracy from 39.9% to 40.5%, which is roughly half an epoch of extra training. I then ran the same task with Fable 5.2. It came up with a far more sophisticated strategy, compressing a large chunk of the network by hand to make room for a tree of common word beginnings. Though this still ended up in almost exactly the same place.
 
-This was the first task the agent couldn’t crack, and I think it shows the limits of weight-space programming. What an undertrained model is missing isn’t a bug you can fix. It’s thousands of small patterns spread across all of its weights. As the agent put it, “knowledge of whole words is the main gap, spread across many of them.” Each hand-written rule was worth a tiny fraction of a percent, and there’s only room for a few dozen of them.
+This was the first task the agent couldn’t accomplish. It's clear that an undertrained model isn’t something that WSP can address. As the agent put it:
+
+> knowledge of whole words is the main gap, spread across many of them.
+
+## Conclusion
+
+WSP is an interesting approach to AI development. Frontier LLMs can _explicitly_ reason through patterns in the data, and realise these patterns as weights in a structured way. Gradient descent also captures these patterns, but does so _implicitly_, making it much harder for us to interpret the network's output.
+
+It was also shown in [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/), that an LLM can also address [shortcomings in a model post-training using linear programming](https://nathan.rs/posts/weight-space-lp/). I observered similar capabilities in the Shakespeare experiemnt, but ultimately it's clear that WSP isn't an effective replacement for training loops. For the moment, gradient descent is cheaper, faster and in many cases, results in more accurate models.
+
+But perhaps replacing gradient descent is the wrong goal. In part two, I’ll explore whether an agent’s hand-written weights make a better initialiser for training than random.
