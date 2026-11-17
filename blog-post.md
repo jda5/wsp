@@ -124,8 +124,8 @@ This was the first task the agent couldn’t accomplish. It's clear that an unde
 
 ## Conclusion
 
-WSP is an interesting approach to AI development. Frontier LLMs can _explicitly_ reason through patterns in the data, and realise these patterns as weights in a structured way. Gradient descent also captures these patterns, but does so _implicitly_, making it much harder for us to interpret the network's output.
+WSP is an interesting approach to AI development. Frontier LLMs can _explicitly_ reason through patterns in the data, and realise these patterns as weights in a structured way. Gradient descent also captures these patterns, but does so _implicitly_, making it much harder for us to interpret the network's output. For small models, a network where you can point at every unit and say what it does may be worth more than a few points of accuracy.
 
-It was also shown in [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/) that an LLM can address [shortcomings in a model post-training using linear programming](https://nathan.rs/posts/weight-space-lp/). I observed similar capabilities in the Shakespeare experiment, but ultimately it's clear that WSP isn't an effective replacement for training loops. For the moment, gradient descent is cheaper, faster and in many cases, results in more accurate models.
+It was also shown in [Sparks of Weight-Space Programming](https://rikiyat.github.io/blog/weight-space-programming/) that an LLM can address [shortcomings in a model post-training using linear programming](https://nathan.rs/posts/weight-space-lp/). I observed similar capabilities in the Shakespeare experiment, but ultimately it's clear that WSP isn't an effective replacement for training loops. For the moment, gradient descent is cheaper, faster and in many cases, results in more accurate models. The agent seems better at deciding what a network should look like than at choosing its exact numbers, which is exactly the part gradient descent is good at.
 
-But perhaps replacing gradient descent is the wrong goal. In part two, I’ll explore whether an agent’s hand-written weights make a better initialiser for training than random.
+But perhaps replacing gradient descent is the wrong goal. In part two, I’ll explore whether an agent’s hand-written weights make a better initialiser than random ones.
